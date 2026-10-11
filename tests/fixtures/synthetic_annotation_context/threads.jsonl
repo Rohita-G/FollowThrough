@@ -1,0 +1,10 @@
+{"thread_id":"SYN-NEW","message_count":1,"source_relative_paths":["synthetic/SYN-NEW/1"]}
+{"thread_id":"SYN-COMMIT","message_count":2,"source_relative_paths":["synthetic/SYN-COMMIT/1","synthetic/SYN-COMMIT/2"]}
+{"thread_id":"SYN-DATE","message_count":2,"source_relative_paths":["synthetic/SYN-DATE/1","synthetic/SYN-DATE/2"]}
+{"thread_id":"SYN-REASSIGN","message_count":2,"source_relative_paths":["synthetic/SYN-REASSIGN/1","synthetic/SYN-REASSIGN/2"]}
+{"thread_id":"SYN-COMBINED","message_count":2,"source_relative_paths":["synthetic/SYN-COMBINED/1","synthetic/SYN-COMBINED/2"]}
+{"thread_id":"SYN-CANCEL","message_count":2,"source_relative_paths":["synthetic/SYN-CANCEL/1","synthetic/SYN-CANCEL/2"]}
+{"thread_id":"SYN-COMPLETE","message_count":2,"source_relative_paths":["synthetic/SYN-COMPLETE/1","synthetic/SYN-COMPLETE/2"]}
+{"thread_id":"SYN-UNRELATED","message_count":2,"source_relative_paths":["synthetic/SYN-UNRELATED/1","synthetic/SYN-UNRELATED/2"]}
+{"thread_id":"SYN-AMB","message_count":3,"source_relative_paths":["synthetic/SYN-AMB/1","synthetic/SYN-AMB/2","synthetic/SYN-AMB/3"]}
+{"thread_id":"SYN-MULTI","message_count":3,"source_relative_paths":["synthetic/SYN-MULTI/1","synthetic/SYN-MULTI/2","synthetic/SYN-MULTI/3"]}

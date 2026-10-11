@@ -1,2 +1,3 @@
 numpy
 pytest
+spacy>=3.7,<4

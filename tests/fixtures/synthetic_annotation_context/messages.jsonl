@@ -1,0 +1,21 @@
+{"message_id":"SYN-NEW-01","thread_id":"SYN-NEW","position":1,"source_relative_path":"synthetic/SYN-NEW/1","cleaned_body":"Please prepare the agenda."}
+{"message_id":"SYN-COMMIT-01","thread_id":"SYN-COMMIT","position":1,"source_relative_path":"synthetic/SYN-COMMIT/1","cleaned_body":"Prepare the summary."}
+{"message_id":"SYN-COMMIT-02","thread_id":"SYN-COMMIT","position":2,"source_relative_path":"synthetic/SYN-COMMIT/2","cleaned_body":"I will prepare the summary."}
+{"message_id":"SYN-DATE-01","thread_id":"SYN-DATE","position":1,"source_relative_path":"synthetic/SYN-DATE/1","cleaned_body":"Deliver the report by May 1."}
+{"message_id":"SYN-DATE-02","thread_id":"SYN-DATE","position":2,"source_relative_path":"synthetic/SYN-DATE/2","cleaned_body":"Move the deadline to May 8."}
+{"message_id":"SYN-REASSIGN-01","thread_id":"SYN-REASSIGN","position":1,"source_relative_path":"synthetic/SYN-REASSIGN/1","cleaned_body":"Prepare the budget."}
+{"message_id":"SYN-REASSIGN-02","thread_id":"SYN-REASSIGN","position":2,"source_relative_path":"synthetic/SYN-REASSIGN/2","cleaned_body":"Rae will take this over."}
+{"message_id":"SYN-COMBINED-01","thread_id":"SYN-COMBINED","position":1,"source_relative_path":"synthetic/SYN-COMBINED/1","cleaned_body":"Prepare the report."}
+{"message_id":"SYN-COMBINED-02","thread_id":"SYN-COMBINED","position":2,"source_relative_path":"synthetic/SYN-COMBINED/2","cleaned_body":"Lee takes it over and the new deadline is Friday."}
+{"message_id":"SYN-CANCEL-01","thread_id":"SYN-CANCEL","position":1,"source_relative_path":"synthetic/SYN-CANCEL/1","cleaned_body":"Prepare the export."}
+{"message_id":"SYN-CANCEL-02","thread_id":"SYN-CANCEL","position":2,"source_relative_path":"synthetic/SYN-CANCEL/2","cleaned_body":"Cancel the export task."}
+{"message_id":"SYN-COMPLETE-01","thread_id":"SYN-COMPLETE","position":1,"source_relative_path":"synthetic/SYN-COMPLETE/1","cleaned_body":"Review the report."}
+{"message_id":"SYN-COMPLETE-02","thread_id":"SYN-COMPLETE","position":2,"source_relative_path":"synthetic/SYN-COMPLETE/2","cleaned_body":"The report is complete."}
+{"message_id":"SYN-UNRELATED-01","thread_id":"SYN-UNRELATED","position":1,"source_relative_path":"synthetic/SYN-UNRELATED/1","cleaned_body":"Prepare the budget."}
+{"message_id":"SYN-UNRELATED-02","thread_id":"SYN-UNRELATED","position":2,"source_relative_path":"synthetic/SYN-UNRELATED/2","cleaned_body":"The cafeteria is closed today."}
+{"message_id":"SYN-AMB-01","thread_id":"SYN-AMB","position":1,"source_relative_path":"synthetic/SYN-AMB/1","cleaned_body":"Prepare the budget."}
+{"message_id":"SYN-AMB-02","thread_id":"SYN-AMB","position":2,"source_relative_path":"synthetic/SYN-AMB/2","cleaned_body":"Prepare the travel plan."}
+{"message_id":"SYN-AMB-03","thread_id":"SYN-AMB","position":3,"source_relative_path":"synthetic/SYN-AMB/3","cleaned_body":"Please finish that one first."}
+{"message_id":"SYN-MULTI-01","thread_id":"SYN-MULTI","position":1,"source_relative_path":"synthetic/SYN-MULTI/1","cleaned_body":"Prepare the slides."}
+{"message_id":"SYN-MULTI-02","thread_id":"SYN-MULTI","position":2,"source_relative_path":"synthetic/SYN-MULTI/2","cleaned_body":"Book the room."}
+{"message_id":"SYN-MULTI-03","thread_id":"SYN-MULTI","position":3,"source_relative_path":"synthetic/SYN-MULTI/3","cleaned_body":"I will send the slides and book the room by Friday."}
