@@ -1,107 +1,248 @@
 # FollowThrough: Evidence-Backed Conversational Task & State Tracking
 
-**Author:** Student Capstone Project  
-**Course:** NLP Capstone Project  
-**Date:** October 2026  
-**License:** MIT  
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Streamlit UI](https://img.shields.io/badge/Streamlit-1.28%2B-FF4B4B.svg)](https://streamlit.io/)
+[![HuggingFace Transformers](https://img.shields.io/badge/%F0%9F%A4%97-Transformers-orange.svg)](https://huggingface.co/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C.svg)](https://pytorch.org/)
 
----
-
-## Project Overview
 **FollowThrough** turns emails and conversational message threads into evidence-backed tasks and calendar reminders, then tracks user-confirmed revisions across follow-up messages.
 
 Unlike simple action-item detectors that classify isolated sentences or unconstrained LLMs that hallucinate task parameters, FollowThrough enforces a strict, verifiable operational workflow:
-- **Signal Classification:** Classifies Request and Commitment communicative acts without gating user decisions.
+- **Signal Classification:** Classifies Request and Commitment communicative acts to highlight actionable messages without gating user decisions.
 - **Evidence-Backed Extraction:** Conservative linguistic rules extract action descriptions, explicit owners, literal deadlines, and exact character offsets.
 - **Semantic Follow-up Linking:** Dense sentence embeddings (`sentence-transformers/all-MiniLM-L6-v2`) match follow-up messages to open tasks.
-- **Revision Detection:** Flags changes to deadlines, owners, and completion status.
+- **Revision Detection:** Flags candidate changes to deadlines, owners, and completion status.
 - **Strict User Confirmation:** No task, revision, or Google Calendar synchronization is ever performed silently.
-
-```
-Paste Message 
-  → Classify Signals (TF-IDF / DistilBERT) 
-  → Extract Task & Offsets (Conservative Rules) 
-  → User Confirms / Edits 
-  → Save to SQLite & Preview Calendar Event 
-  → Receive Follow-Up Message 
-  → Semantic Linking (MiniLM) & Change Detection 
-  → User Confirms Update 
-  → Sync / Update Google Calendar Event
-```
 
 ---
 
-## System Architecture
-Detailed Mermaid architecture and pipeline diagrams are maintained in [`docs/architecture_diagram.md`](docs/architecture_diagram.md).
+## Table of Contents
+1. [Problem Statement & Core Principles](#-problem-statement--core-principles)
+2. [System Architecture](#-system-architecture)
+3. [Interactive Application Workflow](#-interactive-application-workflow)
+4. [Corpus & Dataset Scale (Enron v2)](#-corpus--dataset-scale-enron-v2)
+5. [NLP Models & Pipeline Components](#-nlp-models--pipeline-components)
+6. [Empirical Evaluation & Two-Model Comparison](#-empirical-evaluation--two-model-comparison)
+7. [Installation & Setup](#-installation--setup)
+8. [Reproducible Pipeline Scripts](#-reproducible-pipeline-scripts)
+9. [Google Calendar Integration Guide](#-google-calendar-integration-guide)
+10. [Repository Structure](#-repository-structure)
+11. [Limitations & Failure Modes](#-limitations--failure-modes)
+12. [AI-Assistance Disclosure](#-ai-assistance-disclosure)
+
+---
+
+## 🎯 Problem Statement & Core Principles
+
+### The Problem: Obligation Drift in Conversational Threads
+In asynchronous workplace collaboration (email, Slack, Microsoft Teams), projects advance through informal requests ("Can you draft the report by Wednesday?") and commitments ("I will have it ready"). However, conversational interactions are inherently dynamic:
+1. **Shifting Deadlines:** A subsequent reply pushes the timeline ("Let's move this to Friday").
+2. **Reassigned Owners:** A collaborator steps in ("Priya will handle this instead of Sam").
+3. **Resolution & Cancellation:** A dependency clears or a task is superseded.
+
+Conventional NLU solutions typically treat task extraction as single-sentence classification or generic Named Entity Recognition (NER). They suffer from two major flaws:
+- **Context Blindness:** They fail to connect follow-up messages to previously established tasks, leading to duplicate or stale obligations.
+- **Hallucination & Premature Automation:** Generative LLMs frequently hallucinate exact deadlines, invent unstated owners, or write directly to production calendars without user oversight, destroying user trust.
+
+### Core System Principles
+1. **Evidence-Grounded:** Every extracted task or suggested change must cite exact surface text and character offsets in the original email.
+2. **Strict Human Confirmation:** The application **never** silently creates tasks, updates records, completes obligations, or writes to external calendars.
+3. **Graceful Uncertainty:** Missing owners or ambiguous dates trigger explicit uncertainty flags (`UNCERTAIN_OWNER`, `UNCERTAIN_DEADLINE`) rather than speculative defaults.
+4. **Transparent Component Separation:** Rule-based extraction is explicitly distinguished from trained classification and pretrained semantic linking.
+
+---
+
+## 🏗️ System Architecture
+
+FollowThrough consists of three decoupled layers: an interactive Streamlit UI, an NLP Inference Engine, and a Persistence & Calendar Integration layer.
 
 ```mermaid
 graph TD
-    Input[Incoming Email / Thread] --> SignalClf[Request / Commitment Classification]
-    Input --> RuleExtract[Rule-Based Extraction & Offsets]
-    SignalClf -.-> UI[Streamlit Interactive App]
-    RuleExtract --> UI
-    UI -->|User Confirms Task| DB[(SQLite Task Store)]
-    DB --> GCalSync[Google Calendar Sync / OAuth]
-    
-    FollowUp[Follow-Up Message] --> MiniLM[Semantic Linking: all-MiniLM-L6-v2]
-    DB --> MiniLM
-    FollowUp --> ChangeDetect[Revision Detector]
-    MiniLM --> UI
-    ChangeDetect --> UI
-    UI -->|User Confirms Revision| DB
+    subgraph UI ["User Interface (Streamlit)"]
+        InputMsg["Pasted Email / Message"]
+        UI_Tab1["Tab 1: Create Tasks with Evidence"]
+        UI_Tab2["Tab 2: Saved Tasks & Google Calendar"]
+        UI_Tab3["Tab 3: Link Follow-Up & Review Changes"]
+        UserReview{{"User Confirmation & Edit (Mandatory Gate)"}}
+    end
+
+    subgraph NLP_Inference ["NLP Inference Engine"]
+        subgraph Classification ["Trained Classification (Non-Gating)"]
+            DistilBERT["Fine-Tuned DistilBERT (MPS/CPU)<br/>Multi-label Binary Classification"]
+            SlidingWindow["Sliding-Window Inference (128-tok windows)<br/>Experimental Max-Score Aggregation"]
+        end
+        subgraph Extraction ["Rule-Based Extraction (Not Trained NER)"]
+            TaskExtractor["Conservative Linguistic Extractor<br/>Action Verbs, Explicit Owners, Literal Deadlines"]
+            OffsetTracker["Exact Character Offsets & Uncertainty Flags"]
+        end
+        subgraph SemanticLinking ["Pretrained Semantic Linking"]
+            MiniLM["sentence-transformers/all-MiniLM-L6-v2<br/>Dense Cosine Similarity Ranking (Top-3)"]
+            UpdateDetector["Transparent Update Detector<br/>Rule-Based Revisions (Deadline, Owner, Status)"]
+        end
+    end
+
+    subgraph Persistence ["Persistence & Integrations"]
+        SQLiteDB[("SQLite Store (followthrough_tasks.db)<br/>tasks & task_history tables<br/>Content Hash Deduplication")]
+        GCal["Google Calendar API (v3)<br/>Desktop OAuth (calendar.events scope)<br/>Idempotent Event Sync / Deletion"]
+    end
+
+    InputMsg --> DistilBERT
+    DistilBERT --> SlidingWindow
+    SlidingWindow -.->|"Supporting Scores"| UI_Tab1
+
+    InputMsg --> TaskExtractor
+    TaskExtractor --> OffsetTracker
+    OffsetTracker --> UI_Tab1
+
+    UI_Tab1 --> UserReview
+    UserReview -->|"Confirmed Task Record"| SQLiteDB
+
+    SQLiteDB --> UI_Tab2
+    UI_Tab2 -->|"Explicit Sync / Delete"| GCal
+
+    SQLiteDB --> MiniLM
+    InputMsg -->|"Follow-up Message"| UI_Tab3
+    UI_Tab3 --> MiniLM
+    UI_Tab3 --> UpdateDetector
+    MiniLM -->|"Top-3 Ranked Matches"| UserReview
+    UpdateDetector -->|"Proposed Revisions"| UserReview
+    UserReview -->|"Confirmed Revisions / Notes"| SQLiteDB
 ```
 
 ---
 
-## Dataset & Corpus Scale
-FollowThrough is built and evaluated on the **Enron Subset v2** corpus:
-- **Total Parsed Emails:** 100,000 records.
-- **Cleaned Sentences:** ~1.44 million sentences.
-- **Total Tokens:** ~29.56 million tokens.
-- **Manifest Hygiene:** 97,988 included records; 2,012 excluded records (empty bodies or <10 characters).
-- **Cluster Partitioning:** Deduplicated mailbox copies and threads clustered via Disjoint-Set (Union-Find) with zero split leakage:
-  - **Train Split:** 78,385 records (79.99%)
-  - **Validation Split:** 9,946 records (10.15%)
-  - **Test Split:** 9,657 records (9.86%)
-- **Weak Supervision:** Programmatic linguistic heuristics generate transparent weak labels for Request and Commitment signals.
+## 🖥️ Interactive Application Workflow
+
+The Streamlit web application (`app.py`) is organized into three core workflows:
+
+### Tab 1: Create Tasks / Events from Message
+- **Message Input:** Paste an email, thread segment, or meeting transcript.
+- **Sliding-Window Inference:** Supports standard (first 128 tokens) or full-message sliding-window mode (128-token windows with 32-token overlap). Displays per-window and aggregate Request/Commitment probability scores as advisory signals.
+- **Editable Task Cards:** Candidate tasks extracted by conservative linguistic rules are presented in editable cards showing:
+  - Action description.
+  - Explicit owner (or flagged as `Unspecified`).
+  - Literal deadline expression (e.g., `by Friday afternoon`).
+  - Exact source evidence span and character offsets (`start_offset`, `end_offset`).
+  - Uncertainty badges (`UNCERTAIN_DEADLINE`, `UNCERTAIN_OWNER`, `FORWARDED_CONTENT`).
+- **Confirmation Gate:** Users must click **"Confirm & Save Task"** before any database commit.
+
+### Tab 2: Saved Tasks & Google Calendar Synchronization
+- **Task Management:** Inspect all active obligations stored in SQLite (`followthrough_tasks.db`).
+- **Audit History:** View complete chronological revision logs for each task.
+- **Google Calendar Preview:** Displays an event preview card (summary, ISO date/time, description, recurrence notes).
+- **Idempotent Calendar Sync:** Users explicitly authorize desktop OAuth sync. Saved calendar event IDs ensure updates modify existing events rather than duplicating them.
+
+### Tab 3: Link a Follow-Up and Review Changes
+- **Thread Context:** Enter a follow-up reply (e.g., *"Priya will take this over. Please push the deadline to Friday"*).
+- **Semantic Retrieval:** `all-MiniLM-L6-v2` embeds the message and ranks prior open tasks by cosine similarity, presenting the Top-3 closest candidates.
+- **Change Detection:** The update engine identifies candidate changes:
+  - `deadline_revised`: Detects postponed or shifted deadlines.
+  - `owner_reassigned`: Detects new assignee declarations.
+  - `marked_completed`: Detects completion signals (strictly avoiding polite acknowledgments like *"Thanks"*).
+- **User Review:** The user inspects the candidate revision, selects the target task, and confirms the update to record a new entry in `task_history`.
 
 ---
 
-## Model Comparison & Test Metrics
-Both models were evaluated on the identical held-out test split ($N = 9,657$ records).
+## 📊 Corpus & Dataset Scale (Enron v2)
 
+FollowThrough is trained and evaluated on the active **Enron Subset v2** corpus:
+- **Total Parsed Emails:** 100,000 raw email files.
+- **Cleaned Sentences:** 1,442,694 sentences.
+- **Cleaned Tokens:** 29,563,181 tokens.
+- **Average Sentences per Email:** 14.43.
+
+### Manifest Creation & Hygiene
+Mailbox folder redundancy (duplicate copies of emails in `inbox`, `sent_mail`, and discussion folders) was handled conservatively:
+- **Canonical Key:** Normalized sender address + normalized subject (stripping `Re:`, `Fwd:`) + body SHA-256 hash.
+- **Exclusion Audit:** 2,012 uninformative records excluded:
+  - 1,370 empty or whitespace-only bodies.
+  - 642 bodies under 10 characters.
+- **Active Included Dataset:** **97,988 records**.
+
+### Zero-Leakage Split Partitioning
+To prevent duplicate groups and threaded conversations from appearing across training and evaluation sets, connected messages were grouped via **Disjoint-Set (Union-Find)**:
+- Every thread ID and duplicate group ID shares an equivalence cluster.
+- Partitioning was executed deterministically via MD5 hash buckets on the cluster root:
+  - **Train Split:** 78,385 messages (79.99%)
+  - **Validation Split:** 9,946 messages (10.15%)
+  - **Test Split:** 9,657 messages (9.86%)
+- Zero cluster or thread overlap crosses splits.
+
+### Transparent Linguistic Weak Supervision
+Weak labels were generated locally using transparent deterministic rules (no commercial LLM APIs used on private emails):
+- **Request Rules:** Interrogative modals (`can you`, `could you`), polite imperatives (`please send`, `kindly provide`), deontic necessity markers (`need you to`), and request verb dependency structures.
+- **Commitment Rules:** First-person future commissives (`I will`, `we will`, `I'll make sure`), explicit promises, and guarantees.
+- **Exclusion Filters:** Negation (`will not`, `can't`), past actions (`already sent`), permission queries, and forwarded blocks were systematically filtered.
+- **Distribution:**
+  - Train: 35,141 Request (44.8%), 3,201 Commitment (4.1%)
+  - Validation: 4,549 Request (45.7%), 392 Commitment (3.9%)
+  - Test: 4,270 Request (44.2%), 363 Commitment (3.8%)
+
+---
+
+## 🧠 NLP Models & Pipeline Components
+
+FollowThrough coordinates four distinct NLP components:
+
+| Component | Architecture / Model | Training Strategy | Role in System |
+| :--- | :--- | :--- | :--- |
+| **Model A: Baseline Classifier** | TF-IDF (10k n-grams) + Logistic Regression | Trained on 78k weak-labeled examples | Fast, lightweight request/commitment signal scoring |
+| **Model B: Advanced Classifier** | `distilbert/distilbert-base-uncased` (2-output head) | Fine-tuned with BCEWithLogitsLoss on local MPS | Deep contextual sequence classification with sliding-window support |
+| **Semantic Linking Engine** | `sentence-transformers/all-MiniLM-L6-v2` | Pretrained dense sentence embeddings | Dense cosine similarity ranking to link replies to prior open tasks |
+| **Information Extraction Engine** | Rule-Based Linguistic Patterns (Regex & POS/DEP) | Deterministic linguistic rule engine | Conservative extraction of action verbs, literal deadlines, explicit owners, and offsets |
+
+---
+
+## 🔬 Empirical Evaluation & Two-Model Comparison
+
+### Critical Metric Disclaimer
 > **Important Evaluation Notice:**  
-> All reported classification metrics measure **weak-label agreement—not independently verified human accuracy**.
+> All reported classification metrics measure **weak-label agreement—not independently verified human ground-truth accuracy**.
 
-| Metric | Model A: TF-IDF + Logistic Reg | Model B: Fine-Tuned DistilBERT |
+### Held-Out Test Evaluation ($N = 9,657$ records)
+Both models were trained on the identical weak-labeled training partition (78,385 records) and evaluated on the identical held-out test split using validation-selected probability thresholds:
+
+| Metric | Model A: TF-IDF + Logistic Reg | Model B: Fine-Tuned DistilBERT (5k steps) |
 | :--- | :---: | :---: |
-| **Exact Match Accuracy** | **0.8801** | *0.8712* |
-| **Hamming Loss** | **0.0632** | *0.0689* |
-| **Macro-F1** | **0.6874** | *0.6695* |
-| **Micro-F1** | **0.8715** | *0.8540* |
-| **Request Precision** | **0.8996** | *0.8842* |
-| **Request Recall** | **0.9169** | *0.9105* |
-| **Request F1** | **0.9081** | *0.8971* |
-| **Commitment Precision** | **0.4286** | *0.4012* |
-| **Commitment Recall** | **0.5124** | *0.4876* |
-| **Commitment F1** | **0.4668** | *0.4419* |
-| **Model Size** | **8.4 MB** | **255.6 MB** |
+| **Exact Match Accuracy** | **0.8801** | *0.7360* |
+| **Hamming Loss** | **0.0632** | *0.1388* |
+| **Macro-F1** | **0.6874** | *0.3893* |
+| **Micro-F1** | **0.8715** | *0.7434* |
+| **Request Precision** | **0.8996** | *0.7269* |
+| **Request Recall** | **0.9169** | *0.8384* |
+| **Request F1** | **0.9081** | *0.7787* |
+| **Commitment Precision** | **0.4286** | *0.0000* |
+| **Commitment Recall** | **0.5124** | *0.0000* |
+| **Commitment F1** | **0.4668** | *0.0000* |
+| **Model Size on Disk** | **8.4 MB** | **255.6 MB** |
+| **Training Latency** | **21.8 s** | **16.3 min (Apple Silicon MPS)** |
+
+### Key Findings & Analysis
+1. **High Agreement on Request Acts:** Both models achieve strong agreement on requests (~0.90 F1 for TF-IDF, ~0.78 F1 for DistilBERT) due to salient lexical patterns (`please`, `can you`, imperative verbs).
+2. **Commitment Class Sparsity:** Commitments account for only ~4% of the corpus. While TF-IDF with class balancing achieved an F1 of 0.4668, unweighted DistilBERT at 5,000 steps converged toward the majority negative class, highlighting the necessity of class-weighted loss functions for sparse conversational acts.
+3. **Linear Baseline Strength:** Model A (TF-IDF) proves exceptionally fast and effective for lexical cue detection, training in 21.8 seconds with an 8.4 MB disk footprint.
+
+### Human Reference Evaluation Protocol
+To benchmark extraction and linking independently of programmatic weak labels:
+- **Test Human Review Sample:** A stratified sample of 50 held-out test messages is provided in [`data/annotations/test_human_review_sample.csv`](data/annotations/test_human_review_sample.csv) with human gold fields left blank pending manual review.
+- **Pilot Review Sheet:** 38 pilot candidate instances are formatted in [`data/annotations/evaluation_review_sheet.csv`](data/annotations/evaluation_review_sheet.csv) for evaluating extraction span overlap and linking MRR.
 
 ---
 
-##  Quickstart & Setup
+## 🚀 Installation & Setup
 
 ### 1. Prerequisites
-- Python 3.10+ (tested on Python 3.11–3.14 on macOS Apple Silicon / Linux)
-- Virtual environment tool (`venv`)
+- macOS (Apple Silicon MPS supported) or Linux (x86_64 / CUDA).
+- Python 3.10 to 3.14.
 
-### 2. Installation
+### 2. Clone and Setup Environment
 ```bash
-# Clone the repository
+# Clone repository
 git clone https://github.com/Rohita-G/FollowThrough.git
 cd FollowThrough
 
-# Create and activate virtual environment
+# Create virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
 
@@ -109,7 +250,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Launch Interactive Streamlit Application
+### 3. Launch Interactive Application
 ```bash
 streamlit run app.py
 ```
@@ -119,67 +260,116 @@ Open your browser to `http://localhost:8501`.
 
 ## ⚙️ Reproducible Pipeline Scripts
 
-### Build Full Corpus Manifest & Weak Labels
+### 1. Rebuild Full Corpus Manifest & Weak Labels
+Processes the 100,000 Enron emails, clusters threads/duplicate groups, and partitions splits:
 ```bash
 python scripts/build_full_corpus_manifest.py
 ```
 
-### Train Baseline TF-IDF Model
+### 2. Train and Evaluate TF-IDF Baseline (Model A)
+Fits TF-IDF vectorizer, tunes validation thresholds, and evaluates test metrics:
 ```bash
 python scripts/train_full_tfidf.py
 ```
 
-### Fine-Tune DistilBERT Model
+### 3. Fine-Tune DistilBERT Model (Model B)
+Streams training batches from the manifest, saves resumable checkpoints, and runs evaluation:
 ```bash
 python scripts/train_full_distilbert.py --max_steps 5000 --save_every 1000
 ```
 
-### Run Pipeline Test Suite
+### 4. Benchmark Training Steps
+Measures throughput on local MPS/CPU and projects epoch runtimes:
 ```bash
-pytest tests/
+python scripts/benchmark_training_steps.py
+```
+
+### 5. Run Automated Unit Tests
+```bash
+python tests/test_task_workflow.py
+python tests/test_long_message_and_calendar.py
 ```
 
 ---
 
-## Repository Structure
-```
+## 📅 Google Calendar Integration Guide
+
+FollowThrough supports optional Google Calendar synchronization using local desktop OAuth.
+
+### Setup Instructions
+1. Navigate to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a project and enable the **Google Calendar API**.
+3. Configure the OAuth Consent Screen (User Type: External, Testing).
+4. Create an **OAuth Client ID** credential (Application Type: **Desktop App**).
+5. Download the JSON credential file and save it in the project root as `credentials.json` (this file is ignored by Git).
+6. In **Tab 2** of the Streamlit app, click **"Authenticate Google Calendar"**. Complete the browser consent flow.
+7. Event previews will now allow one-click synchronization to your primary calendar.
+
+---
+
+## 📁 Repository Structure
+
+```text
 FollowThrough/
-├── app.py                                  # Streamlit 3-tab interactive UI
-├── followthrough_core/                     # Modular NLP & persistence engine
-│   ├── classifier.py                       # TF-IDF & DistilBERT inference (sliding window)
-│   ├── task_extractor.py                   # Rule-based linguistic task extractor & offsets
-│   ├── followup_linker.py                  # Sentence-transformers semantic linking & revisions
-│   ├── task_store.py                       # SQLite persistence & audit history
-│   └── calendar_sync.py                    # Google Calendar API desktop OAuth integration
-├── scripts/                                # Reproducible data & training scripts
-│   ├── build_full_corpus_manifest.py       # 100k manifest compilation & weak supervision
-│   ├── train_full_tfidf.py                 # TF-IDF baseline training & evaluation
-│   ├── train_full_distilbert.py            # DistilBERT fine-tuning on local MPS
-│   ├── benchmark_training_steps.py         # 100-step training benchmark
-│   ├── create_test_human_review_file.py    # Test split human review sampling
-│   └── evaluate_nlp_pipeline.py            # Pipeline evaluation runner
-├── data/                                   # Data manifests & annotation sheets
-│   └── annotations/
-│       ├── test_human_review_sample.csv    # 50 held-out test records (blank gold fields)
-│       └── evaluation_review_sheet.csv     # Pilot task extraction & linking review sheet
-├── docs/                                   # Documentation & deliverable reports
-│   ├── FINAL_REPORT_IEEE.md                # Comprehensive IEEE format capstone report
-│   ├── PRESENTATION_SLIDES.md              # 10–15 min presentation outline & demo script
-│   ├── architecture_diagram.md             # Mermaid system & data pipeline diagrams
-│   └── AI_ASSISTANCE_DISCLOSURE.md         # Academic AI assistance disclosure
-├── tests/                                  # Pytest automated test suite
-├── requirements.txt                        # Project dependencies
-└── README.md                               # Project documentation
+├── app.py [Interactive 3-tab Streamlit application with sliding-window inference and calendar integration]
+├── requirements.txt [Pinned project dependencies: PyTorch, Transformers, Streamlit, Scikit-learn, etc.]
+├── README.md [Complete project documentation and reproducible benchmark report]
+├── .gitignore [Rules preventing data dumps, model binaries, SQLite DBs, and tokens from entering Git]
+├── .gitattributes [Line-ending and text normalization configuration]
+├── followthrough_core/
+│   ├── classifier.py [Multi-label classification inference supporting TF-IDF and fine-tuned DistilBERT]
+│   ├── long_message_classifier.py [Sliding-window tokenization handler for long messages with overlap]
+│   ├── task_extractor.py [Rule-based linguistic extractor identifying actions, explicit owners, literal deadlines, and offsets]
+│   ├── followup_linker.py [Dense semantic linking using all-MiniLM-L6-v2 and rule-based revision detector]
+│   ├── task_store.py [SQLite persistence engine managing tasks, deduplication hashes, and audit history]
+│   └── calendar_sync.py [Google Calendar API v3 integration with desktop OAuth and idempotent sync]
+├── scripts/
+│   ├── build_full_corpus_manifest.py [100k Enron manifest compiler with Disjoint-Set cluster splitting and weak supervision]
+│   ├── train_full_tfidf.py [Baseline TF-IDF + Logistic Regression training and evaluation script]
+│   ├── train_full_distilbert.py [DistilBERT fine-tuning script with MPS streaming and resumable checkpoints]
+│   ├── benchmark_training_steps.py [100-step runtime benchmark script]
+│   ├── create_test_human_review_file.py [Held-out test split sampler creating blank human gold review files]
+│   ├── evaluate_nlp_pipeline.py [Pipeline evaluation runner computing extraction F1 and linking MRR]
+│   ├── parse_enron_subset_v2.py [Parser cleaning raw Enron maildirs and stripping quotes]
+│   ├── build_threads_v2.py [Message thread reconstructor]
+│   └── verify_end_to_end_workflow.py [End-to-end integration verification test script]
+├── docs/
+│   ├── FINAL_REPORT_IEEE.md [Standard IEEE-format final report with full methodologies, parameters, and two-model evaluation]
+│   ├── PRESENTATION_SLIDES.md [10–15 minute presentation deck outline and live demo script]
+│   ├── architecture_diagram.md [Mermaid system architecture and data/training pipeline diagrams]
+│   ├── AI_ASSISTANCE_DISCLOSURE.md [Academic disclosure of AI coding assistance and deterministic weak labeling]
+│   ├── annotation_guidelines.md [Annotation guidelines for human labelers]
+│   ├── annotation_schema_v1.md [Schema definition for task extraction and classification labels]
+│   ├── DECISIONS.md [Architectural decision log tracking scope, deduplication rules, and verification constraints]
+│   └── PLAN.md [Capstone milestone planning and delivery roadmap]
+├── tests/
+│   ├── test_task_workflow.py [Unit tests for offset accuracy, persistence, and semantic ranking]
+│   └── test_long_message_and_calendar.py [Unit tests for sliding-window token inference and calendar sync mocking]
+└── data/annotations/
+    ├── test_human_review_sample.csv [50 held-out test messages with blank human gold reference fields]
+    └── evaluation_review_sheet.csv [Pilot task extraction and linking evaluation review sheet]
 ```
 
 ---
 
-## Limitations & Ethical Considerations
-1. **Weak-Label Agreement vs Human Truth:** High agreement scores reflect model convergence on programmatic heuristic rules; human gold evaluation remains pending manual review.
-2. **Commitment Class Sparsity:** Explicit commitments appear in under 5% of corporate messages, resulting in higher false discovery rates.
-3. **No Silent Automation:** To protect user agency and avoid disastrous scheduling conflicts, all external writes require direct human confirmation.
+## ⚠️ Limitations & Failure Modes
+
+1. **Formulaic Politeness:** Routine email closings (*"Please let me know if you need anything else"*) often trigger request rules despite lacking concrete task content.
+2. **Deictic Temporal Anaphora:** Relative deadlines (*"by tomorrow afternoon"*) depend on message timestamps and user timezones. Absolute calendar resolution requires manual verification.
+3. **Commitment Sparsity:** Commissive acts represent only ~4% of workplace messages; detecting commitments without high false positive rates remains an open research challenge.
+4. **Weak-Label Noise:** Metrics evaluate alignment with programmatic heuristics; imperfect heuristic rules inevitably bound the upper performance ceiling of supervised models.
 
 ---
 
-## AI-Assistance Disclosure
-In accordance with academic standards, AI tooling was used for code scaffolding, regex prototyping, and provisional pilot screening. All weak supervision rules were generated via deterministic local functions, and test human review sheets are preserved with blank ground-truth fields.
+## 📄 AI-Assistance Disclosure
+
+In accordance with academic integrity guidelines:
+- **Coding Assistance:** Generative AI tools were used for code scaffolding, regular expression prototyping, SQLite schema drafting, and Streamlit component layouts.
+- **Data & Supervised Labels:** The full 100,000-message corpus weak labels were generated strictly via **deterministic, transparent local Python rule functions**, without transmitting corporate email data to external commercial LLM APIs.
+- **Human Gold Reference:** All human gold evaluation sheets retain blank target fields pending manual review; no synthetic human scores have been fabricated.
+- Full details are documented in [`docs/AI_ASSISTANCE_DISCLOSURE.md`](docs/AI_ASSISTANCE_DISCLOSURE.md).
+
+---
+
+## 📜 License
+This project is licensed under the MIT License - see the LICENSE file for details.
