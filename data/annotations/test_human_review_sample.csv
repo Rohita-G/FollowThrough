@@ -1,0 +1,808 @@
+sample_id,message_id,thread_id,source_relative_path,weak_request,weak_commitment,human_gold_request,human_gold_commitment,human_reviewer_notes,text
+test_sample_001,<26911498.1075855688052.JavaMail.evans@thyme>,thread-v2-91f33e73eafeb36a,allen-p/_sent_mail/127.,0,1,,,,"Greg,
+
+Happy B-day. Email me your phone # and I will call you.
+
+Keith"
+test_sample_002,<31697227.1075855690545.JavaMail.evans@thyme>,thread-v2-a9d381085ad99680,allen-p/_sent_mail/242.,0,1,,,,"Scott,
+
+ I emailed your question to a friend that works for the new company.  I think
+I know the answer to your questions but I want to get the exact details from
+him.  Basically, they will offer energy  online at a fixed price or some
+price that undercuts the current provider.  Then once their sales are large
+enough they will go to the wholesale market to hedge and lock in a profit.
+The risk is that they have built in enough margin to give them room to manage
+the price risk.  This is my best guess.  I will get back to you with more.
+
+Phillip"
+test_sample_003,<25139095.1075855690566.JavaMail.evans@thyme>,thread-v2-a610eb5b900b7d45,allen-p/_sent_mail/243.,0,1,,,,"Lucy,
+
+ I want to speak to Wade myself.  He can call me at work or home. Or if you
+email me his number I will call him.
+ I would like Gary to direct Wade on renovation tasks and you can give him
+work orders for normal maintenance.
+
+ I will call you tomorrow to discuss items from the office.  Do you need Mary
+to come in on any more Fridays?  I think I
+ can guess your answer.
+
+ I might stop by this Friday.
+
+Phillip"
+test_sample_004,<2398018.1075855692214.JavaMail.evans@thyme>,thread-v2-54587518598261e8,allen-p/_sent_mail/318.,0,1,,,,"---------------------- Forwarded by Phillip K Allen/HOU/ECT on 02/11/2000
+12:31 PM ---------------------------
+
+
+""George Rahal"" <george.rahal@acnpower.com> on 02/07/2000 03:13:58 PM
+To: <Phillip_K_Allen@enron.com>
+cc:
+Subject: RE: W basis quotes
+
+
+I'll get back to them on this.  I know we have sent financials to Clinton
+Energy...I'll check to see if this is enough.  In the meantime, is it
+possible to show me indications on the quotes I asked for?  Please advise.
+George
+
+George Rahal
+Manager, Gas Trading
+ACN Power, Inc.
+7926 Jones Branch Drive, Suite 630
+McLean, VA 22102-3303
+Phone  (703)893-4330 ext. 1023
+Fax  (703)893-4390
+Cell (443)255-7699"
+test_sample_005,<4627792.1075855692236.JavaMail.evans@thyme>,thread-v2-54587518598261e8,allen-p/_sent_mail/319.,0,1,,,,"---------------------- Forwarded by Phillip K Allen/HOU/ECT on 02/09/2000
+10:27 AM ---------------------------
+
+
+""George Rahal"" <george.rahal@acnpower.com> on 02/07/2000 03:13:58 PM
+To: <Phillip_K_Allen@enron.com>
+cc:
+Subject: RE: W basis quotes
+
+
+I'll get back to them on this.  I know we have sent financials to Clinton
+Energy...I'll check to see if this is enough.  In the meantime, is it
+possible to show me indications on the quotes I asked for?  Please advise.
+George
+
+George Rahal
+Manager, Gas Trading
+ACN Power, Inc.
+7926 Jones Branch Drive, Suite 630
+McLean, VA 22102-3303
+Phone  (703)893-4330 ext. 1023
+Fax  (703)893-4390
+Cell (443)255-7699"
+test_sample_006,<20677684.1075855724792.JavaMail.evans@thyme>,thread-v2-6e8c1879e12e9602,allen-p/_sent_mail/399.,0,1,,,,"Bruce,
+
+Thank you for your bid.  I have decided on a floor plan.  I am going to have
+an architect in Austin draw the plans and help me work up a detailed
+specification list.  I will send you that detailed plan and spec list when
+complete for a final bid.  Probably in early to mid June.
+
+Phillip"
+test_sample_007,<13765326.1075855758356.JavaMail.evans@thyme>,thread-v2-bf9b62770c6fadae,beck-s/2001_plan/5.,1,1,,,,"Sally - I will check into the meaning of this E-mail and get back to you.  I
+may leave you a voicemail message or give the information to Patti.
+
+Lisa
+
+
+
+
+	Enron North America Corp.
+
+	From:  Sally Beck                           09/27/2000 09:00 AM
+
+
+To: Lisa B Cousino/HOU/ECT@ECT
+cc:
+Subject: 2001 Plan Timeline
+
+Is this a timeline for all of ENA, or just for the accounting group?
+---------------------- Forwarded by Sally Beck/HOU/ECT on 09/27/2000 08:58 AM
+---------------------------
+
+
+Darin Talley@ENRON
+09/26/2000 02:37 PM
+To: Mark Frank/HOU/ECT@ECT, Thomas Myers/HOU/ECT@ECT, Georgeanne
+Hodges/HOU/ECT@ECT, Jim Coffey/HOU/ECT@ECT, Mary Lynne Ruffer/HOU/ECT@ECT,
+Susan Helton/HOU/ECT@ECT, Jeff Smith/HOU/ECT@ECT, Faith Killen/HOU/ECT@ECT,
+Michael S Galvan/HOU/ECT@ECT, Cheryl Dawes/CAL/ECT@ECT, Jody
+Pierce/HOU/ECT@ECT, Angeles Beltri/HOU/ECT@ECT, Hope Vargas/HOU/ECT@ECT,
+Sally Beck/HOU/ECT@ECT, Pam Becton/HOU/ECT@ECT, Lisa B Cousino/HOU/ECT@ECT,
+Laura E Scott/CAL/ECT@ECT, Laura E Scott/CAL"
+test_sample_008,<28178233.1075855912627.JavaMail.evans@thyme>,thread-v2-d6708c563f1cac9f,beck-s/_sent_mail/1.,1,1,,,,"Thanks for rounding up the tickets for the Orange Bowl.  You can mail them to
+me, or just hold them until I see you after Christmas.  Mike's wife decided
+not to make the trip, so he won't be using the tickets.  Jody Crook will use
+the other two tickets.
+
+Lunch during the week between Christmas and New Years sounds great to me.  I
+will be working that week, but would be glad to meet you guys at Champions
+for lunch if that is best.  Or if you are game for Irma's, just let me know
+when you would like to come downtown.
+
+--Sally
+
+
+
+
+""Jacobs, Ted K"" <tjacobs@ou.edu> on 12/12/2000 09:46:16 AM
+To: ""'Sally Beck'"" <Sally.Beck@enron.com>, ""Mike S. McConnell (E-mail)""
+<mmcconn2@ect.enron.com>
+cc:
+Subject: Lunch??
+
+
+Sally/Mike,
+
+I will be in Houston the week after Christmas (12/26-12/29) and was
+wondering if the two of you were going to be in the office, and if so, would
+you be available for lunch? In talking with David Beck, he was going to try
+to arrange a golf game (Mike, me, Richard Kimberlin a"
+test_sample_009,<30379184.1075856099673.JavaMail.evans@thyme>,thread-v2-58ff3dae62fb8230,beck-s/_sent_mail/1008.,1,1,,,,"I will attend the meeting on Thursday, but will have to leave around 1:15 to
+make it to a meeting at the Doubletree where I am speaking at 1:30.  Thanks.
+
+
+
+
+Tammie Schoppe
+01/10/2001 10:12 AM
+To: Louise Kitchen/HOU/ECT@ECT, Greg Piper/Corp/Enron@Enron, Bill W
+Brown/HOU/ECT@ECT, Harry Arora/HOU/ECT@ECT, Bruce Garner/LON/ECT@ECT, Jay
+Fitzgerald/NY/ECT@ECT, Philippe A Bibi/HOU/ECT@ECT, Andy
+Zipper/Corp/Enron@Enron, Stephen R Horn/HOU/ECT@ECT, Robert
+Jones/Corp/Enron@ENRON, Michael K Patrick/NA/Enron@Enron, Thomas D
+Gros/NA/Enron@Enron, Cedric Burgher/Corp/Enron@ENRON, Dan Bruce/HOU/ECT@ECT,
+David Berberian/Enron Communications@Enron Communications, Rex Shelby/Enron
+Communications@Enron Communications, Stephen H Douglas/HOU/ECT@ECT, Sally
+Beck/HOU/ECT@ECT, Mark Taylor/HOU/ECT@ECT, Lisa Yoho/NA/Enron@Enron
+cc: Tina Spiller/Corp/Enron@Enron, Peggy McCurley/HOU/ECT@ECT, Michele
+Beffer/NA/Enron@ENRON, Rosie Castillo/NA/Enron@Enron, Norma
+Yeverino/HR/Corp/Enron@ENRON, Lydia Cannon/HOU/ECT@ECT,"
+test_sample_010,<16290331.1075863694907.JavaMail.evans@thyme>,thread-v2-c47efa48ecae5797,beck-s/_sent_mail/1523.,0,1,,,,"Hope your long weekend was a good one, uneventful on Monday, at least.  Got
+your message last Friday.  It seems as if Kristin is more and more interested
+in the EBS role, especially after her continuing discussions with Jim
+Fallon.  The timing of her trip to London is somewhat up in the air.  May be
+the end of this week, may be next week.  I think it will still be good for
+you and Kristin to talk in person.  Kristin and Todd are both very qualified
+and you would love working with both.  Kristin's established working
+relationship with Jim Fallon would definitely be a plus.  I don't want to
+lose both of them from ENA, however, at the same
+ time.  So I would suggest that we make it an either or propostion.
+
+I got your message on housing/location in Houston.  I am headed out of the
+office soon for an offsite meeting hosted by ENA's Office of the Chairman.  I
+will call you on Friday when I am back in the office and talk through some
+options on housing."
+test_sample_011,<417374.1075855921619.JavaMail.evans@thyme>,thread-v2-a0f30970642bfc52,beck-s/_sent_mail/391.,0,1,,,,"It is too late in the day in London for me to catch you by phone today.  I
+will call you tomorrow and would like to throw out an idea regarding an
+on-going resource for operations in London.  If you are comfortable with my
+idea, then I can discuss it in person with Fernley while he is here this
+week.  We have time on the calendar plus dinner this week."
+test_sample_012,<4081038.1075855921758.JavaMail.evans@thyme>,thread-v2-afbeca5ad8f43503,beck-s/_sent_mail/397.,0,1,,,,"UGH!!  I am happy for you, but know that Enron will be losing as you leave.
+I am pleased that the opportunity at Reliant is an exciting one for you, and
+I know that you will do a great job.  It has been fun to work with you,
+Ginger, and I too will miss that.  Best of luck to you!  --Sally
+
+
+
+
+
+	From:  Ginger B Gamble                           06/22/2000 05:24 PM
+
+
+To: Amy Lee/Corp/Enron@ENRON, Rachael Tobor/HOU/EES@EES, Edward
+Coats/Corp/Enron@ENRON, Tonai Lehr/Corp/Enron@ENRON, Jennifer
+Kennedy/Corp/Enron@ENRON, Brent A Price/HOU/ECT@ECT, Sally Beck/HOU/ECT@ECT,
+Greek Rice/Corp/Enron@ENRON, Patricia A Lee/HOU/EES@EES, Jordan
+Mintz/HOU/ECT@ECT, Marge Nadasky/HOU/ECT@ECT, Meg Malone/Corp/Enron@ENRON,
+Bill Gulyassy/NA/Enron@Enron
+cc:
+Subject: Enjoyed working with you . . .
+
+I just wanted to drop all of you a note  . . .
+
+I have an outstanding opportunity to head up Reliant's MBA Program.  I will
+begin my employment with Reliant the first week in July.  As soon as I am up
+and running, I w"
+test_sample_013,<10298334.1075855922886.JavaMail.evans@thyme>,thread-v2-888626cd1ab08d4d,beck-s/_sent_mail/448.,0,1,,,,"Lunch probably won't work in that time frame.  I will be out on vacation on
+Monday.  Tuesday's lunch is a standing Risk Forum Meeting and Wednesday I
+will be out of the office during the lunch hour for a school function for one
+of my daughters.  I will check with Ted Murphy on the Tuesday Risk Forum
+meeting, as occassionally the meeting is cancelled.  I will get back in touch
+if the Tuesday lunch does open up.  Would Amita like to meet at another time
+during those days?  There is a possibility that I could do an early dinner on
+Tuesday evening.  How does that work with Amita's schedule?  --Sally
+
+
+
+
+Leah Rijo
+05/17/2000 09:04 AM
+To: Sally Beck/HOU/ECT@ECT
+cc:
+Subject: Lunch w/Amita Gosalia
+
+Hi Sally
+
+Amita from PCG - London will be visiting your offices next Monday - Wednesday
+and would like to meet with you for lunch.  Do you have any available time in
+these three days?
+
+Many thanks,
+
+Leah
+PCG London"
+test_sample_014,<17830429.1075856093217.JavaMail.evans@thyme>,thread-v2-39e1c16b81f929bd,beck-s/_sent_mail/739.,1,1,,,,"Mary Solmonson, one of my direct reports, has been out of the office since
+March 1, 2001 and it is not readily known when she will return to work.  All
+business related e-mail messages require a prompt response from our business
+unit.  Therefore, I am requesting your assistance in completing the following
+tasks:
+
+1)  Grant the necessary access to me to be able to review the incoming
+e-mails directed to Mary Solmonson since March 1, 2001 through today so that
+I can determine which ones require a business response that I can handle.
+Can these be transferred to my e:mail as a simplified way for me to complete
+this review?
+
+2) Effective immediately, please create an automatic message for Mary's
+e-mail box that states ""I am out of the office.  All e-mails are being
+forwarded to Vanessa Schulte for response.""
+
+3)  Effectively immediately, please route any new incoming e-mail messages to
+Vanessa Schulte's mail box.
+
+  Thanks in advance for your help on this matter."
+test_sample_015,<18239189.1075856096438.JavaMail.evans@thyme>,thread-v2-fd1baa2418698cfd,beck-s/_sent_mail/878.,1,1,,,,"I will be in Calgary Wednesday and Thursday this week.  Tuesday is tough,
+because I am trying to finish giving performance reviews.  I can make time on
+Tuesday, but would prefer that we hold this to an hour.  --Sally
+
+
+
+
+Lisa Petruszka@ENRON
+02/05/2001 12:21 PM
+To: Sally Beck/HOU/ECT@ECT, Bob M Hall/NA/Enron@Enron, Mary
+Solmonson/HOU/ECT@ECT
+cc: ""Brent A. McFerren"" <Brent.McFerren@us.cgeyc.com>,
+david.cooke@us.cgeyc.com
+Subject: ASE Draft Agenda Walkthrough
+
+Hello folks -
+
+As we discussed in the initial sponsor meeting, we would like to have a
+preliminary walkthrough of the ASE Studio Workshop draft agenda.  We are
+targeting this discussion for either Tuesday or Wednesday morning and will
+need about 1 to 1 1/2 hours for a thorough review.  Please let me know when
+you can meet and I will arrange the logistics."
+test_sample_016,<54765.1075856097835.JavaMail.evans@thyme>,thread-v2-692bafa507e71bb3,beck-s/_sent_mail/932.,1,1,,,,"Janine,
+
+I can handle that.   I will put in request today.
+
+Patti x39106
+
+
+To: Sally Beck/HOU/ECT@ECT
+cc:
+Subject:
+
+Can you please let me know when Beth will have her new Houston log-in set up
+and what it will be so that I can have her emails and H://drive tranferred
+over?"
+test_sample_017,<12705746.1075855777871.JavaMail.evans@thyme>,thread-v2-bf9b62770c6fadae,beck-s/all_documents/1378.,1,1,,,,"Sally - I will check into the meaning of this E-mail and get back to you.  I
+may leave you a voicemail message or give the information to Patti.
+
+Lisa
+
+
+
+
+	Enron North America Corp.
+
+	From:  Sally Beck                           09/27/2000 09:00 AM
+
+
+To: Lisa B Cousino/HOU/ECT@ECT
+cc:
+Subject: 2001 Plan Timeline
+
+Is this a timeline for all of ENA, or just for the accounting group?
+---------------------- Forwarded by Sally Beck/HOU/ECT on 09/27/2000 08:58 AM
+---------------------------
+
+
+Darin Talley@ENRON
+09/26/2000 02:37 PM
+To: Mark Frank/HOU/ECT@ECT, Thomas Myers/HOU/ECT@ECT, Georgeanne
+Hodges/HOU/ECT@ECT, Jim Coffey/HOU/ECT@ECT, Mary Lynne Ruffer/HOU/ECT@ECT,
+Susan Helton/HOU/ECT@ECT, Jeff Smith/HOU/ECT@ECT, Faith Killen/HOU/ECT@ECT,
+Michael S Galvan/HOU/ECT@ECT, Cheryl Dawes/CAL/ECT@ECT, Jody
+Pierce/HOU/ECT@ECT, Angeles Beltri/HOU/ECT@ECT, Hope Vargas/HOU/ECT@ECT,
+Sally Beck/HOU/ECT@ECT, Pam Becton/HOU/ECT@ECT, Lisa B Cousino/HOU/ECT@ECT,
+Laura E Scott/CAL/ECT@ECT, Laura E Scott/CAL"
+test_sample_018,<320239.1075855791204.JavaMail.evans@thyme>,thread-v2-a0f30970642bfc52,beck-s/all_documents/1912.,1,1,,,,"Hi Sally
+
+Sorry for not getting back to you yesterday!
+
+Would 8.30am this morning suit you to connect with John over the phone?
+
+I have blocked from 2.30pm to 3.00pm in his diary for you - please let me
+know if this suits you.
+
+Thank you.
+
+Lauren
+
+
+
+
+John Sherriff
+28/06/2000 06:32
+To: Sally Beck/HOU/ECT@ECT
+cc: Lauren Urquhart/LON/ECT@ECT
+
+Subject: Re: London Resources
+
+
+Sure Sally - I will ask Lauren to set up a a time.
+
+John
+
+
+
+	Enron Capital & Trade Resources Corp.
+
+	From:  Sally Beck                           27/06/2000 23:51
+
+
+To: John Sherriff/LON/ECT@ECT
+cc:
+
+Subject: London Resources
+
+
+It is too late in the day in London for me to catch you by phone today.  I
+will call you tomorrow and would like to throw out an idea regarding an
+on-going resource for operations in London.  If you are comfortable with my
+idea, then I can discuss it in person with Fernley while he is here this
+week.  We have time on the calendar plus dinner this week."
+test_sample_019,<14256742.1075855791550.JavaMail.evans@thyme>,thread-v2-a0f30970642bfc52,beck-s/all_documents/1927.,0,1,,,,"It is too late in the day in London for me to catch you by phone today.  I
+will call you tomorrow and would like to throw out an idea regarding an
+on-going resource for operations in London.  If you are comfortable with my
+idea, then I can discuss it in person with Fernley while he is here this
+week.  We have time on the calendar plus dinner this week."
+test_sample_020,<23339579.1075855792152.JavaMail.evans@thyme>,thread-v2-afbeca5ad8f43503,beck-s/all_documents/1952.,0,1,,,,"UGH!!  I am happy for you, but know that Enron will be losing as you leave.
+I am pleased that the opportunity at Reliant is an exciting one for you, and
+I know that you will do a great job.  It has been fun to work with you,
+Ginger, and I too will miss that.  Best of luck to you!  --Sally
+
+
+
+
+
+	From:  Ginger B Gamble                           06/22/2000 05:24 PM
+
+
+To: Amy Lee/Corp/Enron@ENRON, Rachael Tobor/HOU/EES@EES, Edward
+Coats/Corp/Enron@ENRON, Tonai Lehr/Corp/Enron@ENRON, Jennifer
+Kennedy/Corp/Enron@ENRON, Brent A Price/HOU/ECT@ECT, Sally Beck/HOU/ECT@ECT,
+Greek Rice/Corp/Enron@ENRON, Patricia A Lee/HOU/EES@EES, Jordan
+Mintz/HOU/ECT@ECT, Marge Nadasky/HOU/ECT@ECT, Meg Malone/Corp/Enron@ENRON,
+Bill Gulyassy/NA/Enron@Enron
+cc:
+Subject: Enjoyed working with you . . .
+
+I just wanted to drop all of you a note  . . .
+
+I have an outstanding opportunity to head up Reliant's MBA Program.  I will
+begin my employment with Reliant the first week in July.  As soon as I am up
+and running, I w"
+test_sample_021,<15294346.1075855687778.JavaMail.evans@thyme>,thread-v2-03542193fd0b766e,allen-p/_sent_mail/115.,1,0,,,,"---------------------- Forwarded by Phillip K Allen/HOU/ECT on 09/28/2000
+01:09 PM ---------------------------
+
+
+
+	From:  Phillip K Allen                           09/28/2000 10:56 AM
+
+
+
+Liane,
+
+ As we discussed yesterday, I am concerned there may have been an attempt to
+manipulate the  El Paso San Juan monthly index.  It appears that a single
+buyer entered the marketplace on both September 26 and 27 and paid above
+market prices ($4.70-$4.80) for San Juan gas.  At the time of these trades,
+offers for physical gas at significantly (10 to 15 cents) lower prices were
+bypassed in order to establish higher trades to report into the index
+calculation.  Additionally, these trades are out of line with the associated
+financial swaps for San Juan.
+
+ We have compiled a list of financial and physical trades executed from
+September 25 to September 27.  These are the complete list of trades from
+Enron Online (EOL), Enron's direct phone conversations, and three brokerage
+firms (Amerex, APB, and Prebo"
+test_sample_022,<25140503.1075855687800.JavaMail.evans@thyme>,thread-v2-03542193fd0b766e,allen-p/_sent_mail/116.,1,0,,,,"Liane,
+
+ As we discussed yesterday, I am concerned there has been an attempt to
+manipulate the  El Paso San Juan monthly index.  A single buyer entered the
+marketplace on both September 26 and 27 and paid above market prices
+($4.70-$4.80) for San Juan gas with the intent to distort the index.  At the
+time of these trades, offers for physical gas at significantly (10 to 15
+cents) lower prices were bypassed in order to establish higher trades to
+report into the index calculation.  Additionally, these trades are out of
+line with the associated financial swaps for San Juan.
+
+ We have compiled a list of financial and physical trades executed from
+September 25 to September 27.  These are the complete list of trades from
+Enron Online (EOL), Enron's direct phone conversations, and three brokerage
+firms (Amerex, APB, and Prebon).  Please see the attached spreadsheet for a
+trade by trade list and a summary.  We have also included a summary of gas
+daily prices to illustrate the value of San Juan "
+test_sample_023,<8052466.1075855378887.JavaMail.evans@thyme>,thread-v2-56ec29458925f6e7,allen-p/_sent_mail/23.,1,0,,,,"Gary,
+
+I have also been speaking to Johnnie Brown in San Antonio to be the general contractor.  According to Johnnie, I would not be pay any less buying from the factory versus purchasing the panels through him since my site is within his region.  Assuming this is true, I will work directly with him.  I believe he has sent you my plans.  They were prepared by Kipp Flores architects.
+
+Can you confirm that the price is the same direct from the factory or from the distributor?  If you have the estimates worked up for Johnnie will you please email them to me as well?
+
+Thank you for your time.  I am excited about potentially using your product.
+
+Phillip Allen"
+test_sample_024,<12786049.1075855378908.JavaMail.evans@thyme>,thread-v2-d5dfe2aaf75d18f4,allen-p/_sent_mail/24.,1,0,,,,"Ray,
+
+Is there any detail on the gas cost proxy.  Which delivery points from which publication will be used?  Basically, can you help us get any clarification on the language ""the average daily cost of gas for all delivery points in California""?
+
+Phillip"
+test_sample_025,<6057369.1075855690933.JavaMail.evans@thyme>,thread-v2-b3ef5bea2fbc59bd,allen-p/_sent_mail/260.,1,0,,,,"---------------------- Forwarded by Phillip K Allen/HOU/ECT on 05/22/2000
+11:43 AM ---------------------------
+
+
+""CapacityCenter.com"" <marketing@capacitycenter.com> on 05/18/2000 02:55:43 PM
+To: Industry_Participant@mailman.enron.com
+cc:
+Subject: Gas Transportation Market Intelligence
+
+
+
+
+
+										[IMAGE]
+
+
+											Natural Gas Transporation Contract Information and Pipeline Notices
+											Delivered to Your Desktop
+
+									http://www.capacitycenter.com
+			[IMAGE]
+						[IMAGE]
+				[IMAGE]
+						[IMAGE]
+			[IMAGE]
+						[IMAGE]
+						[IMAGE]
+						[IMAGE]
+			[IMAGE]
+						[IMAGE]				Register Now and Sign Up For A Free Trial
+										Through The End Of May Bid Week
+
+
+										Capacity Shopper: Learn about capacity release that is posted to bid. Pick up
+some transport at a good price or explore what releases are out there....it
+can affect gas prices!
+										Daily Activity Reports: Check out the deals that were done! What did your
+competitors pick up, and how do their deals "
+test_sample_026,<19583103.1075855379044.JavaMail.evans@thyme>,thread-v2-842bfc291f2dbcd8,allen-p/_sent_mail/30.,1,0,,,,"---------------------- Forwarded by Phillip K Allen/HOU/ECT on 04/24/2001 02:23 PM ---------------------------
+
+
+Eric Benson@ENRON on 04/24/2001 11:47:40 AM
+To:	Phillip K Allen/HOU/ECT@ECT
+cc:
+Subject:	Instructions for FERC Meetings
+
+Mr. Allen -
+
+Per our phone conversation, please see the instructions below to get access to view FERC meetings.  Please advise if there are any problems, questions or concerns.
+
+Eric Benson
+Sr. Specialist
+Enron Government Affairs - The Americas
+713-853-1711
+
+++++++++++++++++++++++++++
+
+----- Forwarded by Eric Benson/NA/Enron on 04/24/2001 01:45 PM -----
+
+	Janet Butler 11/06/2000 04:51 PM 	   To: Eric.Benson@enron.com, Steve.Kean@enron.com, Richard.Shapiro@enron.com  cc:   Subject: Instructions for FERC Meetings
+
+
+As long as you are configured to receive Real Video, you should be able to access the FERC meeting this Wednesday, November 8.  The instructions are below.
+
+
+---------------------- Forwarded by Janet Butler/ET&S/Enron on 11/06/2000 04:49 PM ------"
+test_sample_027,<7485729.1075855692278.JavaMail.evans@thyme>,thread-v2-54587518598261e8,allen-p/_sent_mail/321.,1,0,,,,"George,
+
+ Can you please call my credit desk at 713-853-1803.  They have not received
+any financials for ACN Power."
+test_sample_028,<31424216.1075855723750.JavaMail.evans@thyme>,thread-v2-3efd99c177a599cd,allen-p/_sent_mail/352.,1,0,,,,"Can you guys coordinate to make sure someone listens to this conference call
+each week.  Tara from the fundamental group was recording these calls when
+they happened every day.
+
+Phillip
+---------------------- Forwarded by Phillip K Allen/HOU/ECT on 05/07/2001
+07:26 AM ---------------------------
+
+
+James D Steffes@ENRON
+05/03/2001 05:44 AM
+To: Phillip K Allen/HOU/ECT@ECT
+cc:
+Subject: Re: Western Wholesale Activities - Gas & Power Conf. Call
+Privileged & Confidential Communication
+Attorney-Client Communication and Attorney Work Product Privileges Asserted
+
+Please forward to anyone on your team that wants updates on Western wholesale
+matters (should also give you an opportunity to raise state matters if you
+want to discuss).
+
+Jim
+---------------------- Forwarded by James D Steffes/NA/Enron on 05/03/2001
+07:42 AM ---------------------------
+
+
+Ray Alvarez
+05/02/2001 05:40 PM
+To: Steve Walton/HOU/ECT@ECT, Susan J Mara/NA/Enron@ENRON, Alan
+Comnes/PDX/ECT@ECT, Leslie Lawner/NA/Enron@Enron, Reb"
+test_sample_029,<14983560.1075855723797.JavaMail.evans@thyme>,thread-v2-3efd99c177a599cd,allen-p/_sent_mail/354.,1,0,,,,"---------------------- Forwarded by Phillip K Allen/HOU/ECT on 05/04/2001
+10:15 AM ---------------------------
+
+
+James D Steffes@ENRON
+05/03/2001 05:44 AM
+To: Phillip K Allen/HOU/ECT@ECT
+cc:
+Subject: Re: Western Wholesale Activities - Gas & Power Conf. Call
+Privileged & Confidential Communication
+Attorney-Client Communication and Attorney Work Product Privileges Asserted
+
+Please forward to anyone on your team that wants updates on Western wholesale
+matters (should also give you an opportunity to raise state matters if you
+want to discuss).
+
+Jim
+---------------------- Forwarded by James D Steffes/NA/Enron on 05/03/2001
+07:42 AM ---------------------------
+
+
+Ray Alvarez
+05/02/2001 05:40 PM
+To: Steve Walton/HOU/ECT@ECT, Susan J Mara/NA/Enron@ENRON, Alan
+Comnes/PDX/ECT@ECT, Leslie Lawner/NA/Enron@Enron, Rebecca W
+Cantrell/HOU/ECT@ECT, Donna Fulton/Corp/Enron@ENRON, Jeff
+Dasovich/NA/Enron@Enron, Christi L Nicolay/HOU/ECT@ECT, James D
+Steffes/NA/Enron@Enron, jalexander@gibbs-bruns.com, Phill"
+test_sample_030,<17428641.1075855379196.JavaMail.evans@thyme>,thread-v2-5955673690868627,allen-p/_sent_mail/37.,1,0,,,,"Andrea,
+
+After reviewing Bryan Hull's resume, I think he would be best suited for the trading track program.  Please forward his resume to Karen Buckley.
+
+Phillip"
+test_sample_031,<15309963.1075855724278.JavaMail.evans@thyme>,thread-v2-842bfc291f2dbcd8,allen-p/_sent_mail/375.,1,0,,,,"---------------------- Forwarded by Phillip K Allen/HOU/ECT on 04/24/2001
+02:23 PM ---------------------------
+
+
+Eric Benson@ENRON on 04/24/2001 11:47:40 AM
+To: Phillip K Allen/HOU/ECT@ECT
+cc:
+Subject: Instructions for FERC Meetings
+
+Mr. Allen -
+
+Per our phone conversation, please see the instructions below to get access
+to view FERC meetings.  Please advise if there are any problems, questions or
+concerns.
+
+Eric Benson
+Sr. Specialist
+Enron Government Affairs - The Americas
+713-853-1711
+
+++++++++++++++++++++++++++
+
+----- Forwarded by Eric Benson/NA/Enron on 04/24/2001 01:45 PM -----
+
+	Janet Butler
+	11/06/2000 04:51 PM
+
+		 To: Eric.Benson@enron.com, Steve.Kean@enron.com, Richard.Shapiro@enron.com
+		 cc:
+		 Subject: Instructions for FERC Meetings
+
+As long as you are configured to receive Real Video, you should be able to
+access the FERC meeting this Wednesday, November 8.  The instructions are
+below.
+
+
+---------------------- Forwarded by Janet Butler/ET&S/Enron on 11/06/2000
+04:49 PM ---"
+test_sample_032,<4213874.1075855724427.JavaMail.evans@thyme>,thread-v2-5955673690868627,allen-p/_sent_mail/382.,1,0,,,,"Andrea,
+
+After reviewing Bryan Hull's resume, I think he would be best suited for the
+trading track program.  Please forward his resume to Karen Buckley.
+
+Phillip"
+test_sample_033,<26828278.1075855724470.JavaMail.evans@thyme>,thread-v2-6b0ec74fe8a38af4,allen-p/_sent_mail/384.,1,0,,,,"Johnnie,
+
+Thank you for meeting with me on Friday.  I left feeling very optimistic
+about the panel system.  I would like to find a way to incorporate the panels
+into the home design I showed you.  In order to make it feasible within my
+budget I am sure it will take several iterations.  The prospect of purchasing
+the panels and having your  framers install them may have to be considered.
+However, my first choice would be for you to be the general contractor.
+
+I realize you receive a number of calls just seeking information about this
+product with very little probability of a sale.  I just want to assure you
+that I am going to build this house in the fall and I would seriously
+consider using the panel system if it truly was only a slight increase in
+cost over stick built.
+
+Please email your cost estimates when complete."
+test_sample_034,<29587860.1075855758380.JavaMail.evans@thyme>,thread-v2-bf9b62770c6fadae,beck-s/2001_plan/6.,1,0,,,,"Please note that earnings and headcount templates are due to Consolidations
+on Monday, October 2nd.  Attached is the latest timeline.  Please submit your
+templates to Trey Hardy by then.  Several guidelines or allocation
+calculations (e.g., IT) have not been sent to you because we have not
+received them from Corp. or ENW.  Therefore, we recommend that you use the
+guidelines from 2000.  That should avoid any delays for Monday.
+
+Please forward this to anyone who is participating in the Plan 2001 process.
+Call me if you have any questions (x58694).  Thank you.
+
+DT"
+test_sample_035,<20125395.1075856099868.JavaMail.evans@thyme>,thread-v2-cd6465e07fbeee98,beck-s/_sent_mail/1016.,1,0,,,,"Great - I will add her name to the distribution list so that she will get our
+upcoming note on the location for this meeting.  Thanks.
+
+
+
+	Enron North America Corp.
+
+	From:  Brenda F Herod                           01/08/2001 12:24 PM
+
+
+To: Sally Beck/HOU/ECT@ECT, Patti Thompson/HOU/ECT@ECT
+cc: Jill Lafave/ENRON@enronXgate
+Subject: Re: January 11 - Managing Operational Risk
+
+I have invited a new manager, Jill Lafave, who started today.
+
+
+
+	Enron North America Corp.
+
+	From:  Sally Beck                           01/05/2001 05:57 PM
+
+
+To: Bob M Hall/NA/Enron@Enron, Robert Superty/HOU/ECT, Diane H
+Cook/HOU/ECT@ECT, Edward Terry/HOU/ECT@ECT, Victor Lamadrid/HOU/ECT@ECT,
+George F Smith/HOU/ECT@ECT, Randall L Gay/HOU/ECT@ECT, Patti
+Sullivan/HOU/ECT@ECT, Donna Greif/HOU/ECT@ECT, Katherine L Kelly/HOU/ECT@ECT,
+Michael Eiben/HOU/ECT@ECT, Tricia Spence/HOU/ECT@ECT, Rita Wynne/HOU/ECT@ECT,
+Daren J Farmer/HOU/ECT@ECT, Jeffrey C Gossett/HOU/ECT@ECT, Greg
+Couch/HOU/ECT@ECT, Darron C Giron/HOU/ECT@ECT"
+test_sample_036,<24741229.1075855687937.JavaMail.evans@thyme>,thread-v2-617fc7aa702e0b43,allen-p/_sent_mail/122.,0,0,,,,"---------------------- Forwarded by Phillip K Allen/HOU/ECT on 09/26/2000
+12:07 PM ---------------------------
+
+
+
+	From:  Cindy Cicchetti                           09/26/2000 09:23 AM
+
+
+To: Phillip K Allen/HOU/ECT@ECT, Hunter S Shively/HOU/ECT@ECT, Scott
+Mills/HOU/ECT@ECT, Allan Severude/HOU/ECT@ECT, Russ Severson/HOU/ECT@ECT,
+Fletcher J Sturm/HOU/ECT@ECT, Scott Neal/HOU/ECT@ECT
+cc:
+Subject: Gas Physical/Financial Position
+
+I have scheduled and entered on each of your calendars a meeting for the
+above referenced topic.  It will take place on Thursday, 9/28 from 3:00 -
+4:00 in Room EB2537."
+test_sample_037,<9942513.1075855688311.JavaMail.evans@thyme>,thread-v2-dc6fa1a5b446dde4,allen-p/_sent_mail/139.,0,0,,,,http://www.hearme.com/vc2/?chnlOwnr=pallen@enron.com
+test_sample_038,<31071154.1075855688399.JavaMail.evans@thyme>,thread-v2-1994ad7df0e378f2,allen-p/_sent_mail/143.,0,0,,,,"why is aeco basis so low on the list?  Is NWPL mapped differently than AECO?
+What about the correlation to Nymex on AECO?"
+test_sample_039,<20997494.1075855688856.JavaMail.evans@thyme>,thread-v2-7455983d421cd047,allen-p/_sent_mail/164.,0,0,,,,"Mark,
+
+ Here is a spreadsheet detailing our September Socal trades. (I did not
+distinguish between buys vs. sells.)
+
+
+
+Phillip"
+test_sample_040,<16011733.1075855689415.JavaMail.evans@thyme>,thread-v2-e5b5f29a924b2247,allen-p/_sent_mail/190.,0,0,,,,"Cash
+ Hehub
+ Chicago
+ PEPL
+ Katy
+ Socal
+ Opal
+ Permian
+
+Gas Daily
+
+ Hehub
+ Chicago
+ PEPL
+ Katy
+ Socal
+ NWPL
+ Permian
+
+Prompt
+
+ Nymex
+ Chicago
+ PEPL
+ HSC
+ Socal
+ NWPL"
+test_sample_041,<15248522.1075855690027.JavaMail.evans@thyme>,thread-v2-b5778e26910936ca,allen-p/_sent_mail/218.,0,0,,,,"---------------------- Forwarded by Phillip K Allen/HOU/ECT on 07/11/2000
+04:59 PM ---------------------------
+
+
+
+	From:  Robert Badeer                           07/11/2000 02:44 PM
+
+
+To: Phillip K Allen/HOU/ECT@ECT
+cc:
+Subject:"
+test_sample_042,<23290954.1075855690306.JavaMail.evans@thyme>,thread-v2-d90662a240437bbb,allen-p/_sent_mail/231.,0,0,,,,Anytime after 3 p.m.
+test_sample_043,<12729421.1075855690654.JavaMail.evans@thyme>,thread-v2-bdbc0f7a961af3be,allen-p/_sent_mail/247.,0,0,,,,"---------------------- Forwarded by Phillip K Allen/HOU/ECT on 06/06/2000
+12:27 PM ---------------------------
+
+
+
+	From:  Phillip K Allen                           06/06/2000 10:26 AM
+
+
+To: Robert Badeer/HOU/ECT@ECT
+cc:
+Subject:
+
+http://ecthou-webcl1.nt.ect.enron.com/gas/
+
+All the gas reports are under west desk
+
+Call Brian Hoskins for a password"
+test_sample_044,<2068674.1075855691152.JavaMail.evans@thyme>,thread-v2-199a64f31308b680,allen-p/_sent_mail/270.,0,0,,,,2000-1969=31
+test_sample_045,<25048691.1075855691514.JavaMail.evans@thyme>,thread-v2-c153e6098952b9bb,allen-p/_sent_mail/287.,0,0,,,,"http://ectpdx-sunone/~ctatham/navsetup/index.htm
+
+id   pallen
+pw  westgasx
+
+highly sensitive do not distribute"
+test_sample_046,<21295362.1075855379019.JavaMail.evans@thyme>,thread-v2-842bfc291f2dbcd8,allen-p/_sent_mail/29.,0,0,,,,it works.  thank you
+test_sample_047,<8109671.1075855691984.JavaMail.evans@thyme>,thread-v2-e1036baf4837cec8,allen-p/_sent_mail/309.,0,0,,,,Try again.  The attachment was not attached.
+test_sample_048,<32123574.1075855692171.JavaMail.evans@thyme>,thread-v2-84ff36d4db9e2ca4,allen-p/_sent_mail/316.,0,0,,,,"Should I appeal to Skilling.
+
+---------------------- Forwarded by Phillip K Allen/HOU/ECT on 02/15/2000
+12:52 PM ---------------------------
+
+
+Lee Wright@ENRON
+02/15/2000 10:48 AM
+To: Phillip K Allen/HOU/ECT@ECT
+cc: Amelia Alder/OTS/Enron@ENRON
+Subject: Storage of Cycles at the Body Shop
+
+Phillip -
+I applaud you for using your cycle as daily transportation.  Saves on gas,
+pollution and helps keep you strong and healthy.  Enron provides bike racks
+in the front of the building for requests such as this.  Phillip, I wish we
+could accommodate this request; however, The Body Shop does not have the
+capacity nor can assume the responsibility for storing cycles on a daily
+basis.  If you bring a very good lock you should be able to secure the bike
+at the designated outside racks.
+
+Keep Pedalling - Lee"
+test_sample_049,<2838867.1075855692621.JavaMail.evans@thyme>,thread-v2-28d4a36008d5d90f,allen-p/_sent_mail/337.,0,0,,,,Call me. I can't get out.
+test_sample_050,<15569399.1075855379175.JavaMail.evans@thyme>,thread-v2-d2b618f5c7aa8bee,allen-p/_sent_mail/36.,0,0,,,,Have him send his resume to Karen Buckley in HR.  There is a new round of trading track interviews in May.

@@ -17,8 +17,17 @@ venv/
 *.pt
 *.bin
 *.ckpt
-.env
+*.joblib
+*.env
 .env.*
+credentials.json
+client_secret*.json
+token.json
+.credentials/
+data/credentials/
+*.db
+*.sqlite
+*.sqlite3
 
 # OS/editor junk
 .DS_Store
