@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
-"""Streamlit app for FollowThrough: Task extraction, SQLite persistence, semantic follow-up linking,
-sliding-window long-message inference, and Google Calendar sync."""
+"""Streamlit app for FollowThrough: Task extraction, SQLite persistence, and semantic follow-up linking."""
 
 import csv
-import datetime
 import io
 import json
-import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -19,9 +16,8 @@ from followthrough_core.task_extractor import extract_candidate_tasks
 from followthrough_core.task_store import TaskStore
 from followthrough_core.followup_linker import FollowupLinker
 from followthrough_core.long_message_classifier import classify_long_message
-from followthrough_core.calendar_sync import CalendarSyncManager, NOTIFICATION_DISCLAIMER
 
-# Paths
+# Model & Evaluation Paths
 ORIG_DISTILBERT_DIR = Path("results/action_detector_distilbert/distilbert/checkpoint")
 TUNED_DISTILBERT_DIR = Path("results/action_detector_tuned/distilbert/checkpoint")
 TUNED_THRESHOLDS_PATH = Path("results/action_detector_tuned/thresholds.json")
@@ -48,11 +44,6 @@ def get_followup_linker() -> FollowupLinker:
 
 
 @st.cache_resource
-def get_calendar_manager() -> CalendarSyncManager:
-    return CalendarSyncManager()
-
-
-@st.cache_resource
 def load_distilbert(model_dir: Path) -> Tuple[Any, Any]:
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = AutoModelForSequenceClassification.from_pretrained(model_dir)
@@ -73,21 +64,22 @@ def load_json(p: Path) -> Dict[str, Any]:
     return {}
 
 
-# UI Setup
-st.set_page_config(page_title="FollowThrough Task & Follow-up Tracker", layout="wide")
-st.title("FollowThrough: Task Extraction, Follow-up Linking & Calendar Sync")
-st.caption("Turn messages into structured tasks, persist change history in SQLite, and link follow-up updates with semantic ranking.")
+# -------------------------------------------------------------
+# UI Configuration
+# -------------------------------------------------------------
+st.set_page_config(page_title="FollowThrough Task Tracker", layout="wide")
+st.title("FollowThrough: Evidence-Backed Conversational Task & State Tracker")
+st.caption("Turn messages into evidence-backed tasks, persist change history in SQLite, and track confirmed updates across follow-ups.")
 
 task_store = get_task_store()
 followup_linker = get_followup_linker()
-calendar_manager = get_calendar_manager()
 
-# Sidebar: Research Details & Google Calendar OAuth Controls
+# Sidebar: Research Details & Classifier Options
 with st.sidebar:
     st.subheader("Research & Architecture Details")
     st.markdown("""
-**Distinction of Methods**:
-- **Trained Classifiers**: DistilBERT / TF-IDF trained on small AI-assisted dataset (N=43). Supporting scores only.
+**Core Methodology**:
+- **Trained Classifiers**: DistilBERT / TF-IDF for Request/Commitment signals. Supporting advisory scores only; never gates extraction.
 - **Pretrained Semantic Similarity**: `all-MiniLM-L6-v2` compares follow-ups to saved tasks. Similarity is *not* proof of a relationship; requires user confirmation.
 - **Rule-based Extraction & Update Detection**: Conservative linguistic patterns for action verbs, explicit owners, literal dates, and status changes. Not trained NER.
     """)
@@ -104,7 +96,6 @@ with st.sidebar:
             index=0,
             help="Full-message mode uses overlapping 128-token windows. Message aggregation is experimental, not calibrated confidence.",
         )
-        st.markdown("**Dataset**: 43 messages across 12 threads. Test set N=17.")
         comp = load_json(COMPARISON_METRICS)
         if comp:
             st.markdown("**Test Set Comparison (N=17)**:")
@@ -115,53 +106,21 @@ with st.sidebar:
             st.markdown(f"**Tuned Thresholds**: Request = `{tuned_th.get('request_threshold')}`, Commitment = `{tuned_th.get('commitment_threshold')}`")
             st.caption(f"Evidence lost to truncation: {tuned_th.get('truncation_lost_evidence')}")
 
-    # Google Calendar OAuth Section
-    st.subheader("Google Calendar Integration")
-    is_cal_connected = calendar_manager.is_connected()
 
-    if is_cal_connected:
-        st.success("Google Calendar: Connected")
-        if st.button("Disconnect Calendar", type="secondary"):
-            calendar_manager.disconnect()
-            st.info("Calendar disconnected. Local token removed.")
-            st.rerun()
-    else:
-        st.info("Google Calendar: Disconnected")
-        st.caption("Local desktop OAuth using minimal scope (`calendar.events`). No passwords collected. Credentials & tokens stored locally outside Git.")
-
-        creds_file_exists = calendar_manager.credentials_path.is_file()
-        if not creds_file_exists:
-            st.caption("Upload `credentials.json` (or place in `data/credentials/credentials.json`):")
-            uploaded_creds = st.file_uploader("Upload Google OAuth Client Secrets JSON", type=["json"])
-            if uploaded_creds:
-                calendar_manager.credentials_path.parent.mkdir(parents=True, exist_ok=True)
-                with calendar_manager.credentials_path.open("wb") as f:
-                    f.write(uploaded_creds.getvalue())
-                st.success("Saved credentials.json successfully.")
-                st.rerun()
-
-        if creds_file_exists:
-            if st.button("Connect Google Calendar (Desktop OAuth)", type="primary"):
-                with st.spinner("Opening browser for local desktop OAuth authorization..."):
-                    ok_conn, msg_conn = calendar_manager.start_desktop_oauth()
-                    if ok_conn:
-                        st.success(msg_conn)
-                        st.rerun()
-                    else:
-                        st.error(f"Connection error: {msg_conn}")
-
-# Main Tabs
+# -------------------------------------------------------------
+# Main Tabs: 1. New Task | 2. My Tasks | 3. Follow-up
+# -------------------------------------------------------------
 tab1, tab2, tab3 = st.tabs([
-    "1. Create tasks from a message",
-    "2. Saved tasks",
-    "3. Link a follow-up and review changes",
+    "1. New Task",
+    "2. My Tasks",
+    "3. Follow-up",
 ])
 
 # -------------------------------------------------------------
-# TAB 1: Create tasks from a message
+# TAB 1: New Task
 # -------------------------------------------------------------
 with tab1:
-    st.subheader("Create Tasks from Message")
+    st.subheader("Extract & Create Task from Message")
     st.markdown(
         "Paste an email or message. Candidate tasks are extracted from the **full message** using **conservative linguistic rules** "
         "(exact character offsets and uncertainty flags preserved). Classifier predictions provide supporting information and never gate extraction."
@@ -175,7 +134,7 @@ with tab1:
 
     col_btn, _ = st.columns([1, 4])
     with col_btn:
-        extract_btn = st.button("Extract Tasks", type="primary")
+        extract_btn = st.button("Analyze & Extract Tasks", type="primary")
 
     if extract_btn or "last_msg_analysis" in st.session_state:
         if extract_btn:
@@ -216,7 +175,6 @@ with tab1:
                     req_pred = int(req_score >= req_thresh)
                     com_pred = int(com_score >= com_thresh)
                 else:
-                    # Full-message sliding window mode
                     long_msg_result = classify_long_message(
                         message_input,
                         tokenizer=tokenizer,
@@ -287,7 +245,6 @@ with tab1:
             if analysis.get("long_msg_result"):
                 lm = analysis["long_msg_result"]
                 st.info(f"**Aggregation Note**: {lm['aggregation_label']}. Total tokens: {lm['total_tokens']}, Windows: {lm['num_windows']}.")
-                
                 with st.expander(f"View Per-Window Breakdown ({lm['num_windows']} windows)", expanded=False):
                     for w in lm["windows"]:
                         st.markdown(
@@ -297,18 +254,18 @@ with tab1:
                         )
                         st.caption(f"Source: \"{w['source_text']}\"")
             else:
-                st.caption("Raw scores are uncalibrated sigmoid probabilities. These predictions inform the user but do not block task extraction.")
+                st.caption("Raw scores are uncalibrated probabilities. These predictions inform the user but do not block task extraction.")
 
         # Candidate Tasks Display & Manual Edit
-        st.markdown("### Candidate Tasks (Conservative Linguistic Extraction)")
+        st.markdown("### Suggested Tasks (Conservative Linguistic Extraction)")
         candidates = analysis["candidates"]
         if not candidates:
             st.info("No explicit action candidate was detected with conservative linguistic rules.")
         else:
-            st.caption("Review and edit candidate task objects before saving to SQLite. Fields are not invented.")
+            st.caption("Review and edit suggested task fields before saving. Missing fields are never invented.")
             for idx, cand in enumerate(candidates):
                 with st.container(border=True):
-                    st.markdown(f"**Candidate #{idx+1}**")
+                    st.markdown(f"**Suggested Task #{idx+1}**")
                     st.markdown(
                         f"**Source Evidence:** `{cand['evidence_text']}` "
                         f"(Offsets: `[{cand['start_offset']}:{cand['end_offset']}]`)"
@@ -342,7 +299,7 @@ with tab1:
                     save_candidate_btn = st.button(
                         f"Confirm & Save Task #{idx+1}",
                         key=f"btn_save_cand_{idx}",
-                        type="secondary",
+                        type="primary",
                     )
                     if save_candidate_btn:
                         task_record = {
@@ -389,14 +346,14 @@ with tab1:
 
 
 # -------------------------------------------------------------
-# TAB 2: Saved tasks & Google Calendar Sync
+# TAB 2: My Tasks
 # -------------------------------------------------------------
 with tab2:
-    st.subheader("Saved Tasks (SQLite Store)")
+    st.subheader("My Tasks")
     tasks = task_store.list_tasks()
 
     if not tasks:
-        st.info("No confirmed tasks in SQLite database yet. Create and confirm tasks in Tab 1.")
+        st.info("No saved tasks in database yet. Create and confirm tasks in Tab 1.")
     else:
         st.caption(f"Total tasks stored: {len(tasks)}. All state updates and revision histories are tracked.")
 
@@ -417,115 +374,28 @@ with tab2:
                 with det_col2:
                     st.markdown(f"**Deadline:** `{t['deadline']}`")
                 with det_col3:
-                    st.markdown(f"**Created (UTC):** `{t['created_at'][:19]}`")
+                    st.markdown(f"**Last Updated (UTC):** `{t['created_at'][:19]}`")
 
-                st.markdown(f"**Evidence:** `{t['evidence_text']}` (Offsets: `[{t['start_offset']}:{t['end_offset']}]`)")
+                # Expandable Evidence
+                with st.expander("Source Evidence", expanded=False):
+                    st.markdown(f"**Evidence Text:** `{t['evidence_text']}`")
+                    st.caption(f"Offsets: `[{t['start_offset']}:{t['end_offset']}]` in original message.")
 
-                # Calendar Status Badge
-                cal_id = t.get("calendar_id")
-                evt_id = t.get("calendar_event_id")
-                if evt_id:
-                    st.success(f"Linked to Google Calendar: Event ID `{evt_id}` (Calendar: `{cal_id}`)")
-                else:
-                    st.caption("Google Calendar: Not synced")
-
-                # Change History
+                # Expandable Change History
                 history = task_store.get_history(t["task_id"])
                 with st.expander(f"Change History ({len(history)} entries)", expanded=False):
                     for h in history:
                         st.markdown(
                             f"- **{h['timestamp'][:19]}** | Update: `{h['update_type']}` | "
-                            f"Old: `{h['old_value']}` -> New: `{h['new_value']}` | "
+                            f"Old: `{h['old_value']}` ➔ New: `{h['new_value']}` | "
                             f"Evidence: *\"{h['evidence_text']}\"*"
                         )
                         if h.get("followup_text"):
                             st.caption(f"Context: {h['followup_text'][:120]}")
 
-                # Google Calendar Sync Controls
-                with st.expander("Google Calendar Sync & Preview", expanded=False):
-                    if not calendar_manager.is_connected():
-                        st.warning("Google Calendar is not connected. Connect in the sidebar first.")
-                    else:
-                        st.caption("Preview and confirm all parameters before writing. Date-only deadlines remain all-day unless a time is provided.")
-                        st.info(NOTIFICATION_DISCLAIMER)
-
-                        # Parse defaults
-                        today_str = datetime.date.today().isoformat()
-                        default_title = t["action_description"]
-
-                        cal_col1, cal_col2 = st.columns(2)
-                        with cal_col1:
-                            cal_title = st.text_input("Event Title:", value=default_title, key=f"cal_title_{t['task_id']}")
-                            is_all_day = st.checkbox("All-day Event (Date-only deadline)", value=True, key=f"cal_allday_{t['task_id']}")
-                            start_date = st.text_input("Date (YYYY-MM-DD):", value=today_str, key=f"cal_sdate_{t['task_id']}")
-
-                        with cal_col2:
-                            tz = st.selectbox("Timezone:", ["UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "Europe/London"], index=2, key=f"cal_tz_{t['task_id']}")
-                            rem_mins = st.number_input("Reminder (Minutes before):", min_value=0, max_value=1440, value=30, key=f"cal_rem_{t['task_id']}")
-
-                            start_time, end_time = None, None
-                            if not is_all_day:
-                                st.caption("Timed event: Explicit start and end time are required. Duration is not invented.")
-                                c_time1, c_time2 = st.columns(2)
-                                with c_time1:
-                                    start_time = st.text_input("Start Time (HH:MM):", value="09:00", key=f"cal_stime_{t['task_id']}")
-                                with c_time2:
-                                    end_time = st.text_input("End Time (HH:MM):", value="10:00", key=f"cal_etime_{t['task_id']}")
-
-                        # Preview Payload
-                        try:
-                            preview_payload = CalendarSyncManager.prepare_event_payload(
-                                title=cal_title,
-                                description=f"Task ID: {t['task_id']}\nOwner: {t['owner']}\nSource Evidence: {t['evidence_text']}",
-                                start_date=start_date,
-                                is_all_day=is_all_day,
-                                start_time=start_time,
-                                end_time=end_time,
-                                timezone=tz,
-                                reminder_minutes=rem_mins,
-                            )
-                            st.json(preview_payload)
-
-                            btn_label = "Confirm & Update Linked Event" if evt_id else "Confirm & Create Event in Google Calendar"
-                            if st.button(btn_label, key=f"btn_sync_cal_{t['task_id']}", type="primary"):
-                                ok_sync, synced_id, _ = calendar_manager.sync_event(
-                                    calendar_id="primary",
-                                    payload=preview_payload,
-                                    existing_event_id=evt_id,
-                                )
-                                if ok_sync:
-                                    task_store.update_task_calendar(t["task_id"], "primary", synced_id)
-                                    st.success(f"Successfully synced event to Google Calendar (ID: `{synced_id}`).")
-                                    st.rerun()
-                                else:
-                                    st.error(f"Sync error: {synced_id}")
-                        except ValueError as val_err:
-                            st.warning(f"Validation requirement: {val_err}")
-
-                        # Cancellation / Deletion Section
-                        if evt_id:
-                            st.markdown("---")
-                            st.markdown("#### Cancel / Delete Event from Google Calendar")
-                            st.caption("Separate confirmation is required before removing this event from Google Calendar.")
-                            confirm_del = st.checkbox(
-                                "I confirm deletion of this event from Google Calendar",
-                                key=f"chk_del_cal_{t['task_id']}",
-                            )
-                            if st.button("Delete Event from Google Calendar", key=f"btn_del_cal_{t['task_id']}", type="secondary"):
-                                if not confirm_del:
-                                    st.error("Please check the confirmation box above to proceed with deletion.")
-                                else:
-                                    ok_del, msg_del = calendar_manager.delete_event("primary", evt_id)
-                                    if ok_del:
-                                        task_store.clear_task_calendar(t["task_id"])
-                                        st.success(msg_del)
-                                        st.rerun()
-                                    else:
-                                        st.error(msg_del)
-
-                # Manual Status Update
+                # Manual Status Update with Evidence & Confirmation
                 with st.expander("Update Task Status (Requires User Confirmation & Evidence)", expanded=False):
-                    st.caption("Constraint: Do not mark an action completed without supporting evidence and user confirmation.")
+                    st.caption("Constraint: Do not mark an action completed or cancelled without supporting evidence and user confirmation.")
                     col_m1, col_m2 = st.columns([2, 1])
                     with col_m1:
                         manual_ev = st.text_input(
@@ -542,6 +412,7 @@ with tab2:
                     confirm_stat_btn = st.button(
                         f"Confirm Status Change for {t['task_id']}",
                         key=f"btn_stat_{t['task_id']}",
+                        type="secondary",
                     )
                     if confirm_stat_btn:
                         if not manual_ev.strip():
@@ -560,7 +431,7 @@ with tab2:
 
 
 # -------------------------------------------------------------
-# TAB 3: Link a follow-up and review changes
+# TAB 3: Follow-up
 # -------------------------------------------------------------
 with tab3:
     st.subheader("Link Follow-up & Review Changes")
@@ -615,8 +486,6 @@ with tab3:
                         st.markdown(f"**Rank #{rank_idx+1} — Task ID:** `{cand_task['task_id']}`")
                         st.markdown(f"**Description:** {cand_task['action_description']}")
                         st.markdown(f"**Current Owner:** `{cand_task['owner']}` | **Current Deadline:** `{cand_task['deadline']}` | **Status:** `{cand_task['status']}`")
-                        if cand_task.get("calendar_event_id"):
-                            st.caption(f"Linked Google Calendar Event: `{cand_task['calendar_event_id']}`")
                     with sc_col2:
                         st.metric("Similarity Score", f"{r['similarity_score']:.4f}")
 
@@ -634,8 +503,6 @@ with tab3:
 
             if selected_task:
                 st.markdown(f"Selected: `{selected_task['task_id']}` — *{selected_task['action_description']}*")
-                if selected_task.get("calendar_event_id"):
-                    st.info(f"Task is linked to Google Calendar Event ID `{selected_task['calendar_event_id']}`. After applying changes, you can sync the revision in Tab 2 without creating a duplicate event.")
 
                 updates = f_analysis["updates"]
                 if not updates:

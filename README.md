@@ -6,14 +6,18 @@
 [![HuggingFace Transformers](https://img.shields.io/badge/%F0%9F%A4%97-Transformers-orange.svg)](https://huggingface.co/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C.svg)](https://pytorch.org/)
 
-**FollowThrough** turns emails and conversational message threads into evidence-backed tasks and calendar reminders, then tracks user-confirmed revisions across follow-up messages.
+**FollowThrough** turns emails and conversational message threads into evidence-backed tasks, then tracks user-confirmed revisions across follow-up messages.
+
+> **Current Project Scope:**  
+> **Email/message ➔ Evidence-backed task ➔ Saved task ledger ➔ Linked follow-up ➔ User-confirmed task update.**  
+> *Note: FollowThrough focuses strictly on task extraction and evidence-grounded task tracking. It does not include calendar integration or automated reminders.*
 
 Unlike simple action-item detectors that classify isolated sentences or unconstrained LLMs that hallucinate task parameters, FollowThrough enforces a strict, verifiable operational workflow:
 - **Signal Classification:** Classifies Request and Commitment communicative acts to highlight actionable messages without gating user decisions.
 - **Evidence-Backed Extraction:** Conservative linguistic rules extract action descriptions, explicit owners, literal deadlines, and exact character offsets.
 - **Semantic Follow-up Linking:** Dense sentence embeddings (`sentence-transformers/all-MiniLM-L6-v2`) match follow-up messages to open tasks.
 - **Revision Detection:** Flags candidate changes to deadlines, owners, and completion status.
-- **Strict User Confirmation:** No task, revision, or Google Calendar synchronization is ever performed silently.
+- **Strict User Confirmation:** No task, state update, or revision is ever performed silently.
 
 ---
 
@@ -26,10 +30,9 @@ Unlike simple action-item detectors that classify isolated sentences or unconstr
 6. [Empirical Evaluation & Two-Model Comparison](#-empirical-evaluation--two-model-comparison)
 7. [Installation & Setup](#-installation--setup)
 8. [Reproducible Pipeline Scripts](#-reproducible-pipeline-scripts)
-9. [Google Calendar Integration Guide](#-google-calendar-integration-guide)
-10. [Repository Structure](#-repository-structure)
-11. [Limitations & Failure Modes](#-limitations--failure-modes)
-12. [AI-Assistance Disclosure](#-ai-assistance-disclosure)
+9. [Repository Structure](#-repository-structure)
+10. [Limitations & Failure Modes](#-limitations--failure-modes)
+11. [AI-Assistance Disclosure](#-ai-assistance-disclosure)
 
 ---
 
@@ -43,11 +46,11 @@ In asynchronous workplace collaboration (email, Slack, Microsoft Teams), project
 
 Conventional NLU solutions typically treat task extraction as single-sentence classification or generic Named Entity Recognition (NER). They suffer from two major flaws:
 - **Context Blindness:** They fail to connect follow-up messages to previously established tasks, leading to duplicate or stale obligations.
-- **Hallucination & Premature Automation:** Generative LLMs frequently hallucinate exact deadlines, invent unstated owners, or write directly to production calendars without user oversight, destroying user trust.
+- **Hallucination & Premature Automation:** Generative LLMs frequently hallucinate exact deadlines or invent unstated owners without user oversight, destroying user trust.
 
 ### Core System Principles
 1. **Evidence-Grounded:** Every extracted task or suggested change must cite exact surface text and character offsets in the original email.
-2. **Strict Human Confirmation:** The application **never** silently creates tasks, updates records, completes obligations, or writes to external calendars.
+2. **Strict Human Confirmation:** The application **never** silently creates tasks, updates records, or completes obligations.
 3. **Graceful Uncertainty:** Missing owners or ambiguous dates trigger explicit uncertainty flags (`UNCERTAIN_OWNER`, `UNCERTAIN_DEADLINE`) rather than speculative defaults.
 4. **Transparent Component Separation:** Rule-based extraction is explicitly distinguished from trained classification and pretrained semantic linking.
 
@@ -55,15 +58,15 @@ Conventional NLU solutions typically treat task extraction as single-sentence cl
 
 ## 🏗️ System Architecture
 
-FollowThrough consists of three decoupled layers: an interactive Streamlit UI, an NLP Inference Engine, and a Persistence & Calendar Integration layer.
+FollowThrough consists of three decoupled layers: an interactive Streamlit UI, an NLP Inference Engine, and a Persistence layer.
 
 ```mermaid
 graph TD
     subgraph UI ["User Interface (Streamlit)"]
         InputMsg["Pasted Email / Message"]
-        UI_Tab1["Tab 1: Create Tasks with Evidence"]
-        UI_Tab2["Tab 2: Saved Tasks & Google Calendar"]
-        UI_Tab3["Tab 3: Link Follow-Up & Review Changes"]
+        UI_Tab1["Tab 1: New Task"]
+        UI_Tab2["Tab 2: My Tasks"]
+        UI_Tab3["Tab 3: Follow-up"]
         UserReview{{"User Confirmation & Edit (Mandatory Gate)"}}
     end
 
@@ -82,9 +85,8 @@ graph TD
         end
     end
 
-    subgraph Persistence ["Persistence & Integrations"]
+    subgraph Persistence ["Persistence Layer"]
         SQLiteDB[("SQLite Store (followthrough_tasks.db)<br/>tasks & task_history tables<br/>Content Hash Deduplication")]
-        GCal["Google Calendar API (v3)<br/>Desktop OAuth (calendar.events scope)<br/>Idempotent Event Sync / Deletion"]
     end
 
     InputMsg --> DistilBERT
@@ -99,7 +101,6 @@ graph TD
     UserReview -->|"Confirmed Task Record"| SQLiteDB
 
     SQLiteDB --> UI_Tab2
-    UI_Tab2 -->|"Explicit Sync / Delete"| GCal
 
     SQLiteDB --> MiniLM
     InputMsg -->|"Follow-up Message"| UI_Tab3
@@ -114,33 +115,36 @@ graph TD
 
 ## 🖥️ Interactive Application Workflow
 
-The Streamlit web application (`app.py`) is organized into three core workflows:
+The Streamlit web application (`app.py`) is organized into three clean workflows:
 
-### Tab 1: Create Tasks / Events from Message
+### Tab 1: New Task
 - **Message Input:** Paste an email, thread segment, or meeting transcript.
-- **Sliding-Window Inference:** Supports standard (first 128 tokens) or full-message sliding-window mode (128-token windows with 32-token overlap). Displays per-window and aggregate Request/Commitment probability scores as advisory signals.
-- **Editable Task Cards:** Candidate tasks extracted by conservative linguistic rules are presented in editable cards showing:
+- **Analyze:** Click "Analyze & Extract Tasks".
+- **Supporting Classifier Scores:** Displays Request/Commitment probability scores as non-gating advisory signals (supporting both standard 128-token mode and full-message sliding-window mode).
+- **Suggested Task Fields (Editable):**
   - Action description.
   - Explicit owner (or flagged as `Unspecified`).
   - Literal deadline expression (e.g., `by Friday afternoon`).
   - Exact source evidence span and character offsets (`start_offset`, `end_offset`).
-  - Uncertainty badges (`UNCERTAIN_DEADLINE`, `UNCERTAIN_OWNER`, `FORWARDED_CONTENT`).
+  - Uncertainty flags (`UNCERTAIN_DEADLINE`, `UNCERTAIN_OWNER`, `FORWARDED_CONTENT`).
 - **Confirmation Gate:** Users must click **"Confirm & Save Task"** before any database commit.
 
-### Tab 2: Saved Tasks & Google Calendar Synchronization
-- **Task Management:** Inspect all active obligations stored in SQLite (`followthrough_tasks.db`).
-- **Audit History:** View complete chronological revision logs for each task.
-- **Google Calendar Preview:** Displays an event preview card (summary, ISO date/time, description, recurrence notes).
-- **Idempotent Calendar Sync:** Users explicitly authorize desktop OAuth sync. Saved calendar event IDs ensure updates modify existing events rather than duplicating them.
+### Tab 2: My Tasks
+- **Clean Task Ledger:** View all active tasks with action description, owner, deadline, current status (`PENDING`, `COMPLETED`, `CANCELLED`), and last updated timestamp.
+- **Expandable Evidence:** Expand to inspect the original evidence span and character offsets.
+- **Expandable Change History:** View the full chronological revision audit trail (old value ➔ new value, evidence snippet, timestamp).
+- **Manual Status Update:** Update status to completed or cancelled with mandatory supporting evidence and user confirmation.
+- *(Cleaned: No calendar columns, sync buttons, or reminder controls.)*
 
-### Tab 3: Link a Follow-Up and Review Changes
-- **Thread Context:** Enter a follow-up reply (e.g., *"Priya will take this over. Please push the deadline to Friday"*).
-- **Semantic Retrieval:** `all-MiniLM-L6-v2` embeds the message and ranks prior open tasks by cosine similarity, presenting the Top-3 closest candidates.
-- **Change Detection:** The update engine identifies candidate changes:
+### Tab 3: Follow-up
+- **Follow-up Input:** Paste a reply or follow-up message (e.g., *"We have postponed the quarterly risk report to next Monday. Mike will review"*).
+- **Semantic Ranking:** `all-MiniLM-L6-v2` ranks saved tasks by cosine similarity, displaying the Top-3 candidate tasks with similarity scores.
+- **Task Selection:** User explicitly selects the confirmed matching task from a dropdown.
+- **Proposed Supported Changes:** Transparent linguistic rules detect revisions:
   - `deadline_revised`: Detects postponed or shifted deadlines.
   - `owner_reassigned`: Detects new assignee declarations.
-  - `marked_completed`: Detects completion signals (strictly avoiding polite acknowledgments like *"Thanks"*).
-- **User Review:** The user inspects the candidate revision, selects the target task, and confirms the update to record a new entry in `task_history`.
+  - `marked_completed`: Detects completion signals (courtesies like *"Thanks"* are strictly excluded).
+- **User Review & Confirmation:** User verifies the exact evidence snippet and clicks **"Confirm & Apply Update"** to commit the revision into the SQLite audit ledger while preserving prior state.
 
 ---
 
@@ -218,11 +222,6 @@ Both models were trained on the identical weak-labeled training partition (78,38
 | **Model Size on Disk** | **8.4 MB** | **255.6 MB** |
 | **Training Latency** | **21.8 s** | **16.3 min (Apple Silicon MPS)** |
 
-### Key Findings & Analysis
-1. **High Agreement on Request Acts:** Both models achieve strong agreement on requests (~0.90 F1 for TF-IDF, ~0.78 F1 for DistilBERT) due to salient lexical patterns (`please`, `can you`, imperative verbs).
-2. **Commitment Class Sparsity:** Commitments account for only ~4% of the corpus. While TF-IDF with class balancing achieved an F1 of 0.4668, unweighted DistilBERT at 5,000 steps converged toward the majority negative class, highlighting the necessity of class-weighted loss functions for sparse conversational acts.
-3. **Linear Baseline Strength:** Model A (TF-IDF) proves exceptionally fast and effective for lexical cue detection, training in 21.8 seconds with an 8.4 MB disk footprint.
-
 ### Human Reference Evaluation Protocol
 To benchmark extraction and linking independently of programmatic weak labels:
 - **Test Human Review Sample:** A stratified sample of 50 held-out test messages is provided in [`data/annotations/test_human_review_sample.csv`](data/annotations/test_human_review_sample.csv) with human gold fields left blank pending manual review.
@@ -261,49 +260,30 @@ Open your browser to `http://localhost:8501`.
 ## ⚙️ Reproducible Pipeline Scripts
 
 ### 1. Rebuild Full Corpus Manifest & Weak Labels
-Processes the 100,000 Enron emails, clusters threads/duplicate groups, and partitions splits:
 ```bash
 python scripts/build_full_corpus_manifest.py
 ```
 
 ### 2. Train and Evaluate TF-IDF Baseline (Model A)
-Fits TF-IDF vectorizer, tunes validation thresholds, and evaluates test metrics:
 ```bash
 python scripts/train_full_tfidf.py
 ```
 
 ### 3. Fine-Tune DistilBERT Model (Model B)
-Streams training batches from the manifest, saves resumable checkpoints, and runs evaluation:
 ```bash
 python scripts/train_full_distilbert.py --max_steps 5000 --save_every 1000
 ```
 
 ### 4. Benchmark Training Steps
-Measures throughput on local MPS/CPU and projects epoch runtimes:
 ```bash
 python scripts/benchmark_training_steps.py
 ```
 
-### 5. Run Automated Unit Tests
+### 5. Run Workflow Verification Suite
 ```bash
+python scripts/verify_end_to_end_workflow.py
 python tests/test_task_workflow.py
-python tests/test_long_message_and_calendar.py
 ```
-
----
-
-## 📅 Google Calendar Integration Guide
-
-FollowThrough supports optional Google Calendar synchronization using local desktop OAuth.
-
-### Setup Instructions
-1. Navigate to the [Google Cloud Console](https://console.cloud.google.com/).
-2. Create a project and enable the **Google Calendar API**.
-3. Configure the OAuth Consent Screen (User Type: External, Testing).
-4. Create an **OAuth Client ID** credential (Application Type: **Desktop App**).
-5. Download the JSON credential file and save it in the project root as `credentials.json` (this file is ignored by Git).
-6. In **Tab 2** of the Streamlit app, click **"Authenticate Google Calendar"**. Complete the browser consent flow.
-7. Event previews will now allow one-click synchronization to your primary calendar.
 
 ---
 
@@ -311,7 +291,7 @@ FollowThrough supports optional Google Calendar synchronization using local desk
 
 ```text
 FollowThrough/
-├── app.py [Interactive 3-tab Streamlit application with sliding-window inference and calendar integration]
+├── app.py [Interactive 3-tab Streamlit application: New Task, My Tasks, and Follow-up]
 ├── requirements.txt [Pinned project dependencies: PyTorch, Transformers, Streamlit, Scikit-learn, etc.]
 ├── README.md [Complete project documentation and reproducible benchmark report]
 ├── .gitignore [Rules preventing data dumps, model binaries, SQLite DBs, and tokens from entering Git]
@@ -322,7 +302,7 @@ FollowThrough/
 │   ├── task_extractor.py [Rule-based linguistic extractor identifying actions, explicit owners, literal deadlines, and offsets]
 │   ├── followup_linker.py [Dense semantic linking using all-MiniLM-L6-v2 and rule-based revision detector]
 │   ├── task_store.py [SQLite persistence engine managing tasks, deduplication hashes, and audit history]
-│   └── calendar_sync.py [Google Calendar API v3 integration with desktop OAuth and idempotent sync]
+│   └── calendar_sync.py [Preserved historical calendar synchronization module]
 ├── scripts/
 │   ├── build_full_corpus_manifest.py [100k Enron manifest compiler with Disjoint-Set cluster splitting and weak supervision]
 │   ├── train_full_tfidf.py [Baseline TF-IDF + Logistic Regression training and evaluation script]
@@ -344,7 +324,7 @@ FollowThrough/
 │   └── PLAN.md [Capstone milestone planning and delivery roadmap]
 ├── tests/
 │   ├── test_task_workflow.py [Unit tests for offset accuracy, persistence, and semantic ranking]
-│   └── test_long_message_and_calendar.py [Unit tests for sliding-window token inference and calendar sync mocking]
+│   └── test_long_message_and_calendar.py [Preserved tests for sliding-window token inference]
 └── data/annotations/
     ├── test_human_review_sample.csv [50 held-out test messages with blank human gold reference fields]
     └── evaluation_review_sheet.csv [Pilot task extraction and linking evaluation review sheet]
@@ -355,7 +335,7 @@ FollowThrough/
 ## ⚠️ Limitations & Failure Modes
 
 1. **Formulaic Politeness:** Routine email closings (*"Please let me know if you need anything else"*) often trigger request rules despite lacking concrete task content.
-2. **Deictic Temporal Anaphora:** Relative deadlines (*"by tomorrow afternoon"*) depend on message timestamps and user timezones. Absolute calendar resolution requires manual verification.
+2. **Deictic Temporal Anaphora:** Relative deadlines (*"by tomorrow afternoon"*) depend on message timestamps and user context.
 3. **Commitment Sparsity:** Commissive acts represent only ~4% of workplace messages; detecting commitments without high false positive rates remains an open research challenge.
 4. **Weak-Label Noise:** Metrics evaluate alignment with programmatic heuristics; imperfect heuristic rules inevitably bound the upper performance ceiling of supervised models.
 

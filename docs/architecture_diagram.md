@@ -6,9 +6,9 @@
 graph TD
     subgraph UI ["User Interface (Streamlit)"]
         InputMsg["Pasted Email / Message"]
-        UI_Tab1["Tab 1: Create Tasks"]
-        UI_Tab2["Tab 2: Saved Tasks & Calendar"]
-        UI_Tab3["Tab 3: Link Follow-up & Review"]
+        UI_Tab1["Tab 1: New Task"]
+        UI_Tab2["Tab 2: My Tasks"]
+        UI_Tab3["Tab 3: Follow-up"]
         UserReview{{"User Confirmation & Edit (Mandatory Gate)"}}
     end
 
@@ -27,9 +27,8 @@ graph TD
         end
     end
 
-    subgraph Persistence ["Persistence & Integrations"]
+    subgraph Persistence ["Persistence Layer"]
         SQLiteDB[("SQLite Store (followthrough_tasks.db)<br/>tasks & task_history tables<br/>Content Hash Deduplication")]
-        GCal["Google Calendar API (v3)<br/>Desktop OAuth (calendar.events scope)<br/>Idempotent Event Sync / Deletion"]
     end
 
     InputMsg --> DistilBERT
@@ -44,7 +43,6 @@ graph TD
     UserReview -->|"Confirmed Task Record"| SQLiteDB
 
     SQLiteDB --> UI_Tab2
-    UI_Tab2 -->|"Explicit Sync / Delete"| GCal
 
     SQLiteDB --> MiniLM
     InputMsg -->|"Follow-up Message"| UI_Tab3
