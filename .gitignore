@@ -15,14 +15,17 @@ env/
 *.db
 *.sqlite3
 
-# Large corpus and raw datasets
+# Large corpus, annotations, and datasets
 data/raw/
 data/processed/
+data/annotations/
 
 # Model weights, checkpoints, and serialized binaries
 models/*.bin
 models/*.safetensors
 models/*.joblib
+models/distilbert_fine_tuned/
+models/distilbert_checkpoints/
 *.pt
 
 # Evaluation exports and raw review sheets
