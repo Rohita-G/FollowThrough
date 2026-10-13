@@ -1,9 +1,10 @@
 """Google Calendar sync module for FollowThrough.
 
+NOTE: Calendar integration and automated reminder functionality are legacy / out-of-scope
+for the active FollowThrough project, pending final deletion decision.
+
 Uses minimal Calendar scope (calendar.events).
 Local desktop OAuth; tokens kept outside Git and never logged.
-Supports event previews, date-only all-day events, timed events with explicit end time,
-idempotent updates to existing event IDs, and separate deletion confirmation.
 """
 
 import os

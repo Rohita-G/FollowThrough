@@ -1,15 +1,9 @@
 # FollowThrough: Evidence-Backed Conversational Task & State Tracking
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![Streamlit UI](https://img.shields.io/badge/Streamlit-1.28%2B-FF4B4B.svg)](https://streamlit.io/)
-[![HuggingFace Transformers](https://img.shields.io/badge/%F0%9F%A4%97-Transformers-orange.svg)](https://huggingface.co/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C.svg)](https://pytorch.org/)
-
 **FollowThrough** turns emails and conversational message threads into evidence-backed tasks, then tracks user-confirmed revisions across follow-up messages.
 
 > **Current Project Scope:**  
-> **Email/message ➔ Evidence-backed task ➔ Saved task ledger ➔ Linked follow-up ➔ User-confirmed task update.**  
+> **Email/message -> Evidence-backed task -> Saved task ledger -> Linked follow-up -> User-confirmed task update.**  
 > *Note: FollowThrough focuses strictly on task extraction and evidence-grounded task tracking. It does not include calendar integration or automated reminders.*
 
 Unlike simple action-item detectors that classify isolated sentences or unconstrained LLMs that hallucinate task parameters, FollowThrough enforces a strict, verifiable operational workflow:
@@ -22,21 +16,21 @@ Unlike simple action-item detectors that classify isolated sentences or unconstr
 ---
 
 ## Table of Contents
-1. [Problem Statement & Core Principles](#-problem-statement--core-principles)
-2. [System Architecture](#-system-architecture)
-3. [Interactive Application Workflow](#-interactive-application-workflow)
-4. [Corpus & Dataset Scale (Enron v2)](#-corpus--dataset-scale-enron-v2)
-5. [NLP Models & Pipeline Components](#-nlp-models--pipeline-components)
-6. [Empirical Evaluation & Two-Model Comparison](#-empirical-evaluation--two-model-comparison)
-7. [Installation & Setup](#-installation--setup)
-8. [Reproducible Pipeline Scripts](#-reproducible-pipeline-scripts)
-9. [Repository Structure](#-repository-structure)
-10. [Limitations & Failure Modes](#-limitations--failure-modes)
-11. [AI-Assistance Disclosure](#-ai-assistance-disclosure)
+1. [Problem Statement & Core Principles](#problem-statement--core-principles)
+2. [System Architecture](#system-architecture)
+3. [Interactive Application Workflow](#interactive-application-workflow)
+4. [Corpus & Dataset Scale (Enron v2)](#corpus--dataset-scale-enron-v2)
+5. [NLP Models & Pipeline Components](#nlp-models--pipeline-components)
+6. [Empirical Evaluation & Two-Model Comparison](#empirical-evaluation--two-model-comparison)
+7. [Installation & Setup](#installation--setup)
+8. [Reproducible Pipeline Scripts](#reproducible-pipeline-scripts)
+9. [Repository Structure](#repository-structure)
+10. [Limitations & Failure Modes](#limitations--failure-modes)
+11. [AI-Assistance Disclosure](#ai-assistance-disclosure)
 
 ---
 
-## 🎯 Problem Statement & Core Principles
+## Problem Statement & Core Principles
 
 ### The Problem: Obligation Drift in Conversational Threads
 In asynchronous workplace collaboration (email, Slack, Microsoft Teams), projects advance through informal requests ("Can you draft the report by Wednesday?") and commitments ("I will have it ready"). However, conversational interactions are inherently dynamic:
@@ -56,7 +50,7 @@ Conventional NLU solutions typically treat task extraction as single-sentence cl
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 FollowThrough consists of three decoupled layers: an interactive Streamlit UI, an NLP Inference Engine, and a Persistence layer.
 
@@ -113,7 +107,7 @@ graph TD
 
 ---
 
-## 🖥️ Interactive Application Workflow
+## Interactive Application Workflow
 
 The Streamlit web application (`app.py`) is organized into three clean workflows:
 
@@ -132,9 +126,8 @@ The Streamlit web application (`app.py`) is organized into three clean workflows
 ### Tab 2: My Tasks
 - **Clean Task Ledger:** View all active tasks with action description, owner, deadline, current status (`PENDING`, `COMPLETED`, `CANCELLED`), and last updated timestamp.
 - **Expandable Evidence:** Expand to inspect the original evidence span and character offsets.
-- **Expandable Change History:** View the full chronological revision audit trail (old value ➔ new value, evidence snippet, timestamp).
+- **Expandable Change History:** View the full chronological revision audit trail (old value -> new value, evidence snippet, timestamp).
 - **Manual Status Update:** Update status to completed or cancelled with mandatory supporting evidence and user confirmation.
-- *(Cleaned: No calendar columns, sync buttons, or reminder controls.)*
 
 ### Tab 3: Follow-up
 - **Follow-up Input:** Paste a reply or follow-up message (e.g., *"We have postponed the quarterly risk report to next Monday. Mike will review"*).
@@ -148,16 +141,17 @@ The Streamlit web application (`app.py`) is organized into three clean workflows
 
 ---
 
-## 📊 Corpus & Dataset Scale (Enron v2)
+## Corpus & Dataset Scale (Enron v2)
 
 FollowThrough is trained and evaluated on the active **Enron Subset v2** corpus:
 - **Total Parsed Emails:** 100,000 raw email files.
 - **Cleaned Sentences:** 1,442,694 sentences.
-- **Cleaned Tokens:** 29,563,181 tokens.
+- **Cleaned Tokens:** 29,556,736 tokens.
 - **Average Sentences per Email:** 14.43.
+- **Thread Count:** 42,317 distinct threads (20,506 singletons, 21,811 multi-message threads).
 
 ### Manifest Creation & Hygiene
-Mailbox folder redundancy (duplicate copies of emails in `inbox`, `sent_mail`, and discussion folders) was handled conservatively:
+Mailbox folder redundancy was handled conservatively:
 - **Canonical Key:** Normalized sender address + normalized subject (stripping `Re:`, `Fwd:`) + body SHA-256 hash.
 - **Exclusion Audit:** 2,012 uninformative records excluded:
   - 1,370 empty or whitespace-only bodies.
@@ -185,51 +179,53 @@ Weak labels were generated locally using transparent deterministic rules (no com
 
 ---
 
-## 🧠 NLP Models & Pipeline Components
+## NLP Models & Pipeline Components
 
 FollowThrough coordinates four distinct NLP components:
 
 | Component | Architecture / Model | Training Strategy | Role in System |
 | :--- | :--- | :--- | :--- |
 | **Model A: Baseline Classifier** | TF-IDF (10k n-grams) + Logistic Regression | Trained on 78k weak-labeled examples | Fast, lightweight request/commitment signal scoring |
-| **Model B: Advanced Classifier** | `distilbert/distilbert-base-uncased` (2-output head) | Fine-tuned with BCEWithLogitsLoss on local MPS | Deep contextual sequence classification with sliding-window support |
+| **Model B: Advanced Classifier** | `distilbert/distilbert-base-uncased` (2-output head) | Fine-tuned for 5,000 steps with BCEWithLogitsLoss on local MPS | Deep contextual sequence classification with sliding-window support |
 | **Semantic Linking Engine** | `sentence-transformers/all-MiniLM-L6-v2` | Pretrained dense sentence embeddings | Dense cosine similarity ranking to link replies to prior open tasks |
 | **Information Extraction Engine** | Rule-Based Linguistic Patterns (Regex & POS/DEP) | Deterministic linguistic rule engine | Conservative extraction of action verbs, literal deadlines, explicit owners, and offsets |
 
 ---
 
-## 🔬 Empirical Evaluation & Two-Model Comparison
+## Empirical Evaluation & Two-Model Comparison
 
 ### Critical Metric Disclaimer
 > **Important Evaluation Notice:**  
 > All reported classification metrics measure **weak-label agreement—not independently verified human ground-truth accuracy**.
 
-### Held-Out Test Evaluation ($N = 9,657$ records)
-Both models were trained on the identical weak-labeled training partition (78,385 records) and evaluated on the identical held-out test split using validation-selected probability thresholds:
+### Held-Out Test Evaluation on All 9,657 Test Records
+Both models were evaluated on the **identical held-out test split** ($N = 9,657$ records):
 
 | Metric | Model A: TF-IDF + Logistic Reg | Model B: Fine-Tuned DistilBERT (5k steps) |
 | :--- | :---: | :---: |
-| **Exact Match Accuracy** | **0.8801** | *0.7360* |
-| **Hamming Loss** | **0.0632** | *0.1388* |
-| **Macro-F1** | **0.6874** | *0.3893* |
-| **Micro-F1** | **0.8715** | *0.7434* |
-| **Request Precision** | **0.8996** | *0.7269* |
-| **Request Recall** | **0.9169** | *0.8384* |
-| **Request F1** | **0.9081** | *0.7787* |
+| **Test Examples Evaluated** | **9,657** | **9,657** |
+| **Exact Match Accuracy** | **0.8801** | *0.7145* |
+| **Hamming Loss** | **0.0632** | *0.1479* |
+| **Macro-F1** | **0.6874** | *0.3656* |
+| **Micro-F1** | **0.8715** | *0.7027* |
+| **Request Precision** | **0.8996** | *0.6801* |
+| **Request Recall** | **0.9169** | *0.7906* |
+| **Request F1** | **0.9081** | *0.7312* |
 | **Commitment Precision** | **0.4286** | *0.0000* |
 | **Commitment Recall** | **0.5124** | *0.0000* |
 | **Commitment F1** | **0.4668** | *0.0000* |
 | **Model Size on Disk** | **8.4 MB** | **255.6 MB** |
-| **Training Latency** | **21.8 s** | **16.3 min (Apple Silicon MPS)** |
+| **Training Run** | **21.8 s** | **16.3 min (5,000 steps on MPS)** |
 
 ### Human Reference Evaluation Protocol
 To benchmark extraction and linking independently of programmatic weak labels:
 - **Test Human Review Sample:** A stratified sample of 50 held-out test messages is provided in [`data/annotations/test_human_review_sample.csv`](data/annotations/test_human_review_sample.csv) with human gold fields left blank pending manual review.
 - **Pilot Review Sheet:** 38 pilot candidate instances are formatted in [`data/annotations/evaluation_review_sheet.csv`](data/annotations/evaluation_review_sheet.csv) for evaluating extraction span overlap and linking MRR.
+- **Status:** Human extraction precision/recall and semantic linking MRR remain **pending human annotation**. No scores are fabricated.
 
 ---
 
-## 🚀 Installation & Setup
+## Installation & Setup
 
 ### 1. Prerequisites
 - macOS (Apple Silicon MPS supported) or Linux (x86_64 / CUDA).
@@ -257,7 +253,7 @@ Open your browser to `http://localhost:8501`.
 
 ---
 
-## ⚙️ Reproducible Pipeline Scripts
+## Reproducible Pipeline Scripts
 
 ### 1. Rebuild Full Corpus Manifest & Weak Labels
 ```bash
@@ -274,12 +270,17 @@ python scripts/train_full_tfidf.py
 python scripts/train_full_distilbert.py --max_steps 5000 --save_every 1000
 ```
 
-### 4. Benchmark Training Steps
+### 4. Evaluate DistilBERT on All 9,657 Test Records
+```bash
+python scripts/evaluate_full_distilbert.py
+```
+
+### 5. Benchmark Training Steps
 ```bash
 python scripts/benchmark_training_steps.py
 ```
 
-### 5. Run Workflow Verification Suite
+### 6. Run Workflow Verification Suite
 ```bash
 python scripts/verify_end_to_end_workflow.py
 python tests/test_task_workflow.py
@@ -287,7 +288,7 @@ python tests/test_task_workflow.py
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```text
 FollowThrough/
@@ -302,11 +303,12 @@ FollowThrough/
 │   ├── task_extractor.py [Rule-based linguistic extractor identifying actions, explicit owners, literal deadlines, and offsets]
 │   ├── followup_linker.py [Dense semantic linking using all-MiniLM-L6-v2 and rule-based revision detector]
 │   ├── task_store.py [SQLite persistence engine managing tasks, deduplication hashes, and audit history]
-│   └── calendar_sync.py [Preserved historical calendar synchronization module]
+│   └── calendar_sync.py [Preserved legacy calendar module pending user deletion decision]
 ├── scripts/
 │   ├── build_full_corpus_manifest.py [100k Enron manifest compiler with Disjoint-Set cluster splitting and weak supervision]
 │   ├── train_full_tfidf.py [Baseline TF-IDF + Logistic Regression training and evaluation script]
 │   ├── train_full_distilbert.py [DistilBERT fine-tuning script with MPS streaming and resumable checkpoints]
+│   ├── evaluate_full_distilbert.py [Evaluates fine-tuned DistilBERT on all 9,657 test records]
 │   ├── benchmark_training_steps.py [100-step runtime benchmark script]
 │   ├── create_test_human_review_file.py [Held-out test split sampler creating blank human gold review files]
 │   ├── evaluate_nlp_pipeline.py [Pipeline evaluation runner computing extraction F1 and linking MRR]
@@ -324,7 +326,7 @@ FollowThrough/
 │   └── PLAN.md [Capstone milestone planning and delivery roadmap]
 ├── tests/
 │   ├── test_task_workflow.py [Unit tests for offset accuracy, persistence, and semantic ranking]
-│   └── test_long_message_and_calendar.py [Preserved tests for sliding-window token inference]
+│   └── test_long_message_and_calendar.py [Preserved tests for sliding-window token inference; calendar tests marked legacy]
 └── data/annotations/
     ├── test_human_review_sample.csv [50 held-out test messages with blank human gold reference fields]
     └── evaluation_review_sheet.csv [Pilot task extraction and linking evaluation review sheet]
@@ -332,7 +334,7 @@ FollowThrough/
 
 ---
 
-## ⚠️ Limitations & Failure Modes
+## Limitations & Failure Modes
 
 1. **Formulaic Politeness:** Routine email closings (*"Please let me know if you need anything else"*) often trigger request rules despite lacking concrete task content.
 2. **Deictic Temporal Anaphora:** Relative deadlines (*"by tomorrow afternoon"*) depend on message timestamps and user context.
@@ -341,7 +343,7 @@ FollowThrough/
 
 ---
 
-## 📄 AI-Assistance Disclosure
+## AI-Assistance Disclosure
 
 In accordance with academic integrity guidelines:
 - **Coding Assistance:** Generative AI tools were used for code scaffolding, regular expression prototyping, SQLite schema drafting, and Streamlit component layouts.
@@ -351,5 +353,5 @@ In accordance with academic integrity guidelines:
 
 ---
 
-## 📜 License
+## License
 This project is licensed under the MIT License - see the LICENSE file for details.

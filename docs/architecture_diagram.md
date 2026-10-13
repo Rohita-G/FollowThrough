@@ -82,7 +82,7 @@ graph TD
         WeakAgreementEval["results/full_corpus_experiment/<br/>Weak-Label Agreement (Not Verified Accuracy)<br/>Exact Match, Macro-F1, Per-label P/R/F1, Confusion Matrix"]
         HumanReviewSuite["data/annotations/test_human_review_sample.csv<br/>N=50 Held-out Test Sample (Human Gold Blank)"]
         PilotPipelineEval["data/annotations/evaluation_review_sheet.csv<br/>Task Extraction & Linking Evaluation Sheet"]
-        WorkflowTests["pytest Suite<br/>Offsets, Calendar OAuth, Deduplication, Sliding Window"]
+        WorkflowTests["Workflow Tests<br/>Offsets, Deduplication, Sliding Window, Semantic Ranking"]
     end
 
     EnronRaw --> CleaningScript

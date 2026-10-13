@@ -1,4 +1,8 @@
-"""Synthetic tests for sliding-window long message inference and Google Calendar sync."""
+"""Synthetic tests for sliding-window long message inference and legacy Google Calendar sync.
+
+NOTE: Calendar tests here cover legacy components pending user deletion approval.
+Sliding-window long message inference remains active.
+"""
 
 import tempfile
 from pathlib import Path
