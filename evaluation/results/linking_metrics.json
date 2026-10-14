@@ -1,0 +1,15 @@
+{
+  "status": "Not yet available: human labels pending",
+  "description": "Evaluation of bi-encoder retrieval (all-MiniLM-L6-v2) for matching follow-up messages to stored parent tasks",
+  "reviewed_count": 0,
+  "total_candidates": 18,
+  "evaluation_sheet_path": "/Users/rohita/Final Project - FOLLOWTHROUGH/data/annotations/evaluation_review_sheet.csv",
+  "pending_fields": [
+    "human_gold_linked_task_id"
+  ],
+  "planned_metrics": [
+    "Mean Reciprocal Rank (MRR)",
+    "Hit@1 (Recall@1)",
+    "Hit@3 (Recall@3)"
+  ]
+}

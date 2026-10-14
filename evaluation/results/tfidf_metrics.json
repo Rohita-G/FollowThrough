@@ -1,0 +1,50 @@
+{
+  "model": "Model A: TF-IDF (10,000 sublinear n-grams) + Logistic Regression",
+  "evaluation_split": "Held-out Test Split (N=9,657)",
+  "label_source": "Full-corpus weak supervision pseudo-labels (Transparent linguistic rules)",
+  "thresholds": {
+    "request": 0.45,
+    "commitment": 0.65
+  },
+  "runtime_seconds": {
+    "load_data": 1.68,
+    "vectorization": 20.4,
+    "training": 1.4,
+    "test_eval": 0.0,
+    "total": 23.62
+  },
+  "disk_usage_mb": 0.52,
+  "test_metrics": {
+    "title": "Weak-label agreement\u2014not independently verified accuracy",
+    "exact_match_accuracy": 0.8800869835352594,
+    "hamming_loss": 0.06301128714921818,
+    "macro_f1": 0.6874461380489989,
+    "micro_f1": 0.8707930778214248,
+    "micro_precision": 0.8568742164646886,
+    "micro_recall": 0.8851715950787826,
+    "labels": {
+      "request": {
+        "precision": 0.8995863970588235,
+        "recall": 0.9168618266978923,
+        "f1": 0.9081419624217119,
+        "support": 4270,
+        "predicted_positive_count": 4352,
+        "tp": 3915,
+        "fp": 437,
+        "fn": 355,
+        "tn": 4950
+      },
+      "commitment": {
+        "precision": 0.42857142857142855,
+        "recall": 0.512396694214876,
+        "f1": 0.46675031367628605,
+        "support": 363,
+        "predicted_positive_count": 434,
+        "tp": 186,
+        "fp": 248,
+        "fn": 177,
+        "tn": 9046
+      }
+    }
+  }
+}

@@ -1,0 +1,3 @@
+model_name,evaluation_split,test_sample_size,exact_match_accuracy,hamming_loss,macro_f1,micro_f1,req_precision,req_recall,req_f1,req_tp,req_fp,req_fn,req_tn,com_precision,com_recall,com_f1,com_tp,com_fp,com_fn,com_tn
+TF-IDF + Logistic Regression,Held-out Test (Weak Labels),9657,0.8801,0.063,0.6874,0.8708,0.8996,0.9169,0.9081,3915,437,355,4950,0.4286,0.5124,0.4668,186,248,177,9046
+Fine-tuned DistilBERT (5k steps),Held-out Test (Weak Labels),9657,0.7145,0.1479,0.3656,0.7027,0.6801,0.7906,0.7312,3376,1588,894,3799,0.0,0.0,0.0,0,11,363,9283

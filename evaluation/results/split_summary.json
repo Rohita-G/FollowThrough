@@ -1,0 +1,32 @@
+{
+  "partitioning_method": "Connected-thread & duplicate-group graph clustering (DisjointSet / Union-Find)",
+  "cluster_leakage": "Zero cluster or thread leakage between train, val, and test splits",
+  "split_counts": {
+    "train": 78385,
+    "validation": 9946,
+    "test": 9657,
+    "excluded": 2012
+  },
+  "split_percentages": {
+    "train": 79.99,
+    "validation": 10.15,
+    "test": 9.86
+  },
+  "label_counts": {
+    "train": {
+      "req": 35141,
+      "com": 3201,
+      "total": 78385
+    },
+    "validation": {
+      "req": 4549,
+      "com": 392,
+      "total": 9946
+    },
+    "test": {
+      "req": 4270,
+      "com": 363,
+      "total": 9657
+    }
+  }
+}

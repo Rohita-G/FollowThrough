@@ -1,0 +1,21 @@
+{
+  "dataset_name": "Enron Email Corpus (Cleaned v2 Subset)",
+  "source": "Carnegie Mellon University Enron Archive (May 2015)",
+  "parsed_messages": 100000,
+  "retained_records": 97988,
+  "excluded_records": 2012,
+  "exclusions_by_reason": {
+    "empty_or_whitespace_body": 1370,
+    "too_short_under_10_chars": 642
+  },
+  "thread_count": 42317,
+  "sentence_count_cleaned_body": 1442694,
+  "token_count_cleaned_body": 29556736,
+  "text_counting_method": "sentences split on whitespace after .!?; tokens use Unicode regex \\b[\\w\u2019'-]+\\b",
+  "cleaning_rules_applied": [
+    "Quoted reply tails removed (Original Message / wrote: boundaries)",
+    "Quoted prefix lines removed ('>')",
+    "Terminal corporate signatures and disclaimers trimmed",
+    "Forwarded message payloads preserved with uncertainty flags"
+  ]
+}

@@ -76,6 +76,29 @@ In modern asynchronous workplace communication (e.g., email threads, enterprise 
 
 ---
 
+## Reproduce the project
+
+To reproduce the complete FollowThrough project from scratch:
+
+```bash
+pip install -r requirements.txt
+python scripts/prepare_data.py --full
+python scripts/train_full_tfidf.py
+python scripts/train_full_distilbert.py
+python scripts/evaluate_models.py
+python scripts/evaluate_extraction_linking.py
+python scripts/generate_final_results.py
+streamlit run app/app.py
+```
+
+> [!TIP]
+> For rapid verification without processing the full 100,000 emails, you can run a non-destructive smoke test:
+> ```bash
+> python scripts/prepare_data.py --smoke
+> ```
+
+---
+
 ## How to Run the Streamlit App
 
 Launch the interactive web application from the project root:
@@ -95,12 +118,17 @@ Then navigate to `http://localhost:8501` in your browser.
 
 To display the verified benchmark comparison table across both models on the held-out test split ($N=9,657$):
 ```bash
-python3 scripts/evaluate_models.py
+python scripts/evaluate_models.py
 ```
 
-To evaluate predictions against a human-annotated ground-truth CSV review sheet:
+To evaluate task extraction and semantic linking against human review sheets:
 ```bash
-python3 scripts/evaluate_models.py --csv path/to/annotated_evaluation.csv
+python scripts/evaluate_extraction_linking.py
+```
+
+To generate the complete set of 8 official evaluation result artifacts in `evaluation/results/`:
+```bash
+python scripts/generate_final_results.py
 ```
 
 ---
@@ -118,18 +146,30 @@ pytest tests/
 
 ```
 FollowThrough-Final/
-├── followthrough_core/            # Core library modules
+├── data_pipeline/                 # Reproducible data-provenance modules
+│   ├── __init__.py                # Package exports
+│   ├── download_enron.py          # Enron corpus tarball download & extraction
+│   ├── select_emails.py           # Mailbox-prioritized email file selection
+│   ├── parse_emails.py            # RFC 822 MIME header and body parser
+│   ├── clean_emails.py            # Boundary stripping, quote removal, body cleaning
+│   ├── build_threads.py           # Subject normalization & thread reconstruction
+│   ├── build_corpus_manifest.py   # Disjoint graph splitting (zero leakage) & manifest builder
+│   └── generate_weak_labels.py    # Transparent regex rules for request & commitment pseudo-labels
+├── followthrough_core/            # Core NLP & state tracking modules
 │   ├── __init__.py                # Package exports
 │   ├── classifier.py              # DistilBERT and TF-IDF classifier wrappers
 │   ├── long_message_classifier.py # Sliding-window tokenization and inference
 │   ├── task_extractor.py          # Conservative linguistic rule extractor & offsets
 │   ├── followup_linker.py         # MiniLM semantic ranking & update detector
 │   └── task_store.py              # SQLite task ledger & append-only history
-├── scripts/                       # Training, data processing, and evaluation scripts
-│   ├── build_full_corpus_manifest.py # Full corpus manifest & disjoint split builder
+├── scripts/                       # Executable CLI workflows & evaluation scripts
+│   ├── prepare_data.py            # Unified data preparation (--full and --smoke)
 │   ├── train_full_tfidf.py        # TF-IDF baseline training & threshold optimization
 │   ├── train_full_distilbert.py   # DistilBERT fine-tuning script with checkpoints
-│   └── evaluate_models.py         # Unified comparative evaluation script
+│   ├── evaluate_models.py         # Comparative classification model evaluation
+│   ├── evaluate_extraction_linking.py # Extraction and linking evaluation on review sheet
+│   ├── generate_final_results.py  # Generates canonical artifacts in evaluation/results/
+│   └── build_full_corpus_manifest.py # Full corpus manifest & disjoint split builder
 ├── app/                           # Streamlit user interface
 │   └── app.py                     # Interactive 3-tab application
 ├── tests/                         # Test suite
@@ -137,14 +177,17 @@ FollowThrough-Final/
 │   ├── test_task_workflow.py      # Offsets, deduplication, and semantic ranking
 │   ├── test_long_message_classifier.py # Sliding window coverage & token bounds
 │   └── test_classifier.py         # Classifier wrapper unit tests
+├── evaluation/
+│   ├── README.md                  # Evaluation guidelines and dataset notes
+│   └── results/                   # Final evaluation result artifacts & comparison
 ├── data/
-│   └── README.md                  # Enron corpus acquisition & preprocessing guide
+│   ├── README.md                  # Enron corpus acquisition & preprocessing guide
+│   └── annotations/               # Stratified test review sheets for human audit
 ├── models/
 │   └── README.md                  # Model architectures, training, and loading guide
-├── evaluation/
-│   └── README.md                  # Weak-label vs. human evaluation documentation
 ├── docs/
 │   ├── architecture.md            # System architecture and Mermaid diagrams
+│   ├── data_provenance.md         # Full data lineage specification & Mermaid diagram
 │   └── project_report.md          # Multi-section IEEE format project report
 ├── requirements.txt               # Python package dependencies
 ├── .gitignore                     # Git exclusion rules

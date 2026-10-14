@@ -1,0 +1,43 @@
+{
+  "model": "Model B: Fine-tuned DistilBERT (5,000 steps, BCEWithLogitsLoss)",
+  "evaluation_split": "Held-out Test Split (N=9,657)",
+  "label_source": "Full-corpus weak supervision pseudo-labels (Transparent linguistic rules)",
+  "total_test_records_evaluated": 9657,
+  "thresholds": {
+    "request": 0.35,
+    "commitment": 0.2
+  },
+  "eval_runtime_seconds": 57.57,
+  "disk_usage_mb": 255.4,
+  "test_metrics": {
+    "title": "Weak-label agreement\u2014not independently verified accuracy",
+    "exact_match_accuracy": 0.7145076110593352,
+    "hamming_loss": 0.14787200994097546,
+    "macro_f1": 0.36560537145332467,
+    "micro_f1": 0.7027477102414655,
+    "labels": {
+      "request": {
+        "precision": 0.6800966962127317,
+        "recall": 0.790632318501171,
+        "f1": 0.7312107429066493,
+        "support": 4270,
+        "predicted_positive_count": 4964,
+        "tp": 3376,
+        "fp": 1588,
+        "fn": 894,
+        "tn": 3799
+      },
+      "commitment": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 363,
+        "predicted_positive_count": 11,
+        "tp": 0,
+        "fp": 11,
+        "fn": 363,
+        "tn": 9283
+      }
+    }
+  }
+}

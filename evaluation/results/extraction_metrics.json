@@ -1,0 +1,19 @@
+{
+  "status": "Not yet available: human labels pending",
+  "description": "Evaluation comparing rule-extracted task descriptions, owners, and literal deadlines against human gold standards",
+  "reviewed_count": 0,
+  "total_candidates": 20,
+  "evaluation_sheet_path": "/Users/rohita/Final Project - FOLLOWTHROUGH/data/annotations/evaluation_review_sheet.csv",
+  "pending_fields": [
+    "human_gold_has_task",
+    "human_gold_action_description",
+    "human_gold_owner",
+    "human_gold_deadline"
+  ],
+  "planned_metrics": [
+    "Task Identification Precision, Recall, and F1",
+    "Span Overlap (Token-level Jaccard Overlap)",
+    "Owner Extraction Exact-Match Accuracy",
+    "Deadline Extraction Exact-Match Accuracy"
+  ]
+}
