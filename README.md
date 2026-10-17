@@ -160,6 +160,7 @@ FollowThrough-Final/
 │   ├── classifier.py              # DistilBERT and TF-IDF classifier wrappers
 │   ├── long_message_classifier.py # Sliding-window tokenization and inference
 │   ├── task_extractor.py          # Conservative linguistic rule extractor & offsets
+│   ├── temporal_normalizer.py     # Calendar grounding engine for relative temporal expressions
 │   ├── followup_linker.py         # MiniLM semantic ranking & update detector
 │   └── task_store.py              # SQLite task ledger & append-only history
 ├── scripts/                       # Executable CLI workflows & evaluation scripts
@@ -176,7 +177,8 @@ FollowThrough-Final/
 │   ├── __init__.py
 │   ├── test_task_workflow.py      # Offsets, deduplication, and semantic ranking
 │   ├── test_long_message_classifier.py # Sliding window coverage & token bounds
-│   └── test_classifier.py         # Classifier wrapper unit tests
+│   ├── test_classifier.py         # Classifier wrapper unit tests
+│   └── test_temporal_normalizer.py# Relative deadline normalization unit tests
 ├── evaluation/
 │   ├── README.md                  # Evaluation guidelines and dataset notes
 │   └── results/                   # Final evaluation result artifacts & comparison
@@ -196,7 +198,7 @@ FollowThrough-Final/
 
 ---
 
-## Limitations
-1. **Linguistic Heuristic Coverage:** The rule-based extractor uses conservative patterns to prevent hallucinations; implicit or colloquial commitments (e.g., "Consider it done") may require manual input.
-2. **Relative Temporal Grounding:** Deadlines like "by next Friday" are preserved as exact literal strings rather than projected calendar dates to avoid guessing sender timezones or assumptions.
+## Capabilities & Limitations
+1. **Temporal Grounding Engine:** Relative deadlines (e.g., "for next Monday at 10 AM", "by Friday afternoon", "tomorrow EOD") are anchored to the message origin timestamp and projected into verified ISO calendar dates and visual calendar badges.
+2. **Linguistic Heuristic Precision:** The rule-based extractor uses conservative patterns to prevent hallucinations; implicit or colloquial commitments (e.g., "Consider it done") can be managed or augmented through the interactive Task Board.
 3. **Advisory Classifiers:** Classification scores provide advisory indicators to guide user attention and do not gate extraction. Weak-supervision label bias was observed on rare commitments in DistilBERT at 5,000 steps without heavy class reweighting.
