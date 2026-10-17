@@ -46,9 +46,15 @@ class TaskStore:
                     evidence_text TEXT NOT NULL,
                     start_offset INTEGER,
                     end_offset INTEGER,
-                    content_hash TEXT UNIQUE
+                    content_hash TEXT UNIQUE,
+                    thread_title TEXT DEFAULT ''
                 )
             """)
+
+            try:
+                cursor.execute("ALTER TABLE tasks ADD COLUMN thread_title TEXT DEFAULT ''")
+            except sqlite3.OperationalError:
+                pass
 
             # 2. Immutable state transition ledger
             cursor.execute("""
@@ -88,11 +94,13 @@ class TaskStore:
             now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
             task_id = f"task-{hashlib.md5((content_hash + now_iso).encode('utf-8')).hexdigest()[:8]}"
 
+            thread_title = task_data.get("thread_title", "").strip()
+
             cursor.execute("""
                 INSERT INTO tasks (
                     task_id, created_at, source_text, action_description,
-                    owner, deadline, status, evidence_text, start_offset, end_offset, content_hash
-                ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)
+                    owner, deadline, status, evidence_text, start_offset, end_offset, content_hash, thread_title
+                ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)
             """, (
                 task_id,
                 now_iso,
@@ -104,6 +112,7 @@ class TaskStore:
                 task_data.get("start_offset", 0),
                 task_data.get("end_offset", 0),
                 content_hash,
+                thread_title,
             ))
 
             # Record creation entry in task history ledger
