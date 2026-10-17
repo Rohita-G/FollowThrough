@@ -31,6 +31,7 @@ from followthrough_core.task_extractor import extract_candidate_tasks
 from followthrough_core.task_store import TaskStore
 from followthrough_core.followup_linker import FollowupLinker
 from followthrough_core.long_message_classifier import classify_long_message
+from followthrough_core.calendar_sync import generate_google_calendar_url, generate_ics_content
 
 # Model & Evaluation Paths
 DISTILBERT_DIR = REPO_ROOT / "models" / "distilbert_fine_tuned"
@@ -611,11 +612,36 @@ with tab1:
                             key=f"edit_deadline_{idx}",
                         )
 
-                    save_candidate_btn = st.button(
-                        f"Add Task #{idx+1} to Task Board",
-                        key=f"btn_save_cand_{idx}",
-                        type="primary",
-                    )
+                    col_save_btn, col_gcal_btn, col_ics_btn = st.columns([1.5, 1.3, 1])
+                    temp_task = {
+                        "task_id": f"cand-{idx}",
+                        "action_description": edit_desc.strip(),
+                        "owner": edit_owner.strip(),
+                        "deadline": edit_deadline.strip(),
+                        "evidence_text": cand["evidence_text"],
+                        "thread_title": active_thread_title,
+                    }
+                    with col_save_btn:
+                        save_candidate_btn = st.button(
+                            f"Add Task #{idx+1} to Board",
+                            key=f"btn_save_cand_{idx}",
+                            type="primary",
+                            use_container_width=True,
+                        )
+                    with col_gcal_btn:
+                        gcal_cand_url = generate_google_calendar_url(temp_task)
+                        st.link_button("Add to Google Calendar", url=gcal_cand_url, type="secondary", use_container_width=True)
+                    with col_ics_btn:
+                        ics_cand_data = generate_ics_content(temp_task)
+                        st.download_button(
+                            label="Download .ics",
+                            data=ics_cand_data,
+                            file_name=f"task_cand_{idx+1}.ics",
+                            mime="text/calendar",
+                            key=f"ics_cand_{idx}",
+                            use_container_width=True,
+                        )
+
                     if save_candidate_btn:
                         task_record = {
                             "source_text": analysis["text"],
@@ -796,19 +822,38 @@ with tab2:
                     for h in history:
                         st.markdown(f"- **{h['timestamp'][:16]}** | `{h['update_type']}` | `{h['old_value']}` -> `{h['new_value']}`")
 
-            # Quick Status Change Buttons (no emojis)
-            if not is_done:
-                btn_done_col, btn_cancel_col, _ = st.columns([1, 1, 3])
-                with btn_done_col:
-                    if st.button("Mark Complete", key=f"btn_done_{t['task_id']}", type="secondary"):
+            # Quick Status & Calendar Action Buttons
+            btn_done_col, btn_cancel_col, btn_gcal_col, btn_ics_col = st.columns([1, 1, 1.4, 1])
+            with btn_done_col:
+                if not is_done:
+                    if st.button("Mark Complete", key=f"btn_done_{t['task_id']}", type="secondary", use_container_width=True):
                         task_store.apply_update(t["task_id"], "completed", "completed", "Marked complete", "User marked complete")
                         st.success("Task marked complete.")
                         st.rerun()
-                with btn_cancel_col:
-                    if st.button("Dismiss Task", key=f"btn_canc_{t['task_id']}", type="secondary"):
+                else:
+                    if st.button("Reopen Task", key=f"btn_reopen_{t['task_id']}", type="secondary", use_container_width=True):
+                        task_store.apply_update(t["task_id"], "pending", "pending", "Reopened", "User reopened task")
+                        st.success("Task reopened.")
+                        st.rerun()
+            with btn_cancel_col:
+                if not is_done:
+                    if st.button("Dismiss Task", key=f"btn_canc_{t['task_id']}", type="secondary", use_container_width=True):
                         task_store.apply_update(t["task_id"], "cancelled", "cancelled", "Dismissed by user", "User dismissed task")
                         st.info("Task dismissed.")
                         st.rerun()
+            with btn_gcal_col:
+                gcal_url = generate_google_calendar_url(t)
+                st.link_button("Add to Google Calendar", url=gcal_url, type="secondary", use_container_width=True)
+            with btn_ics_col:
+                ics_data = generate_ics_content(t)
+                st.download_button(
+                    label="Download .ics",
+                    data=ics_data,
+                    file_name=f"{t['task_id']}.ics",
+                    mime="text/calendar",
+                    key=f"ics_{t['task_id']}",
+                    use_container_width=True,
+                )
 
 
 # -------------------------------------------------------------

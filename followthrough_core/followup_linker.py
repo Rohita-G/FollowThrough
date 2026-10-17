@@ -69,10 +69,26 @@ class FollowupLinker:
         """Compute cosine similarity between query text and a list of stored candidate descriptions."""
         if not candidate_texts:
             return np.array([])
-        q_emb = self.model.encode([query], convert_to_numpy=True, normalize_embeddings=True)
-        c_embs = self.model.encode(candidate_texts, convert_to_numpy=True, normalize_embeddings=True)
-        sims = np.dot(c_embs, q_emb.T).squeeze(axis=1)
-        return sims
+        try:
+            q_emb = self.model.encode([query], convert_to_numpy=True, normalize_embeddings=True)
+            c_embs = self.model.encode(candidate_texts, convert_to_numpy=True, normalize_embeddings=True)
+            sims = np.dot(c_embs, q_emb.T).squeeze(axis=1)
+            return sims
+        except (ImportError, ModuleNotFoundError, Exception):
+            # Graceful lexical/TF-IDF fallback when sentence_transformers is not installed
+            from sklearn.feature_extraction.text import TfidfVectorizer
+            from sklearn.metrics.pairwise import cosine_similarity
+            vec = TfidfVectorizer(stop_words="english")
+            X = vec.fit_transform([query] + candidate_texts)
+            sims = cosine_similarity(X[0:1], X[1:]).flatten()
+            q_tokens = set(re.findall(r"\w+", query.lower())) - {"any", "updates", "on", "the", "a", "an", "is", "in", "for"}
+            overlap_scores = []
+            for ct in candidate_texts:
+                c_tokens = set(re.findall(r"\w+", ct.lower()))
+                inter = q_tokens & c_tokens
+                overlap_scores.append(len(inter) / max(len(q_tokens), 1))
+            combined = np.maximum(sims * 1.5, np.array(overlap_scores) * 0.9)
+            return np.clip(combined, 0.0, 1.0)
 
     def rank_candidates(
         self,
