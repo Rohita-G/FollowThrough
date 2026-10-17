@@ -7,10 +7,13 @@ Combines:
    reassignments, cancellations, and reported completions with exact evidence.
 """
 
+import datetime
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
+
+from followthrough_core.temporal_normalizer import normalize_deadline
 
 # Rule patterns detecting explicit deadline revisions (e.g., postponed to Friday)
 DEADLINE_REVISION_PATTERNS = [
@@ -99,7 +102,10 @@ class FollowupLinker:
         return ranked[:top_k]
 
     @staticmethod
-    def detect_updates(followup_text: str) -> List[Dict[str, Any]]:
+    def detect_updates(
+        followup_text: str,
+        reference_date: Optional[datetime.date] = None,
+    ) -> List[Dict[str, Any]]:
         """Conservatively detect proposed updates from follow-up messages with exact evidence.
 
         Rejects pure courtesy messages (e.g. 'Thanks!') so they are never marked as completed.
@@ -107,6 +113,7 @@ class FollowupLinker:
         """
         proposals: List[Dict[str, Any]] = []
         clean = followup_text.strip()
+        ref_date = reference_date or datetime.date.today()
 
         # Reject pure courtesies
         if COURTESY_ONLY.match(clean):
@@ -116,12 +123,16 @@ class FollowupLinker:
         for pat in DEADLINE_REVISION_PATTERNS:
             m = pat.search(clean)
             if m:
+                raw_val = m.group(1)
+                norm_res = normalize_deadline(raw_val, anchor_date=ref_date)
                 proposals.append({
                     "update_type": "deadline_revised",
-                    "new_value": m.group(1),
+                    "new_value": raw_val,
+                    "new_value_normalized": norm_res["display_date"],
+                    "new_value_iso": norm_res["iso_date"],
                     "evidence_text": m.group(0),
                     "confidence": "rule_detected",
-                    "description": f"Proposed deadline revision to: '{m.group(1)}'",
+                    "description": f"Proposed deadline revision to: '{norm_res['display_date']}' (from '{raw_val}')",
                 })
                 break
 

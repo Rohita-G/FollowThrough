@@ -8,6 +8,7 @@ Workflow:
 """
 
 import csv
+import datetime
 import io
 import json
 from pathlib import Path
@@ -169,10 +170,24 @@ with tab1:
         "Custom Message (Type / Paste Your Own)": "",
     }
 
-    selected_sample = st.selectbox(
-        "Choose a sample scenario or enter your own:",
-        list(sample_options.keys()),
-        index=0,
+    col_sample, col_date = st.columns([2, 1])
+    with col_sample:
+        selected_sample = st.selectbox(
+            "Choose a sample scenario or enter your own:",
+            list(sample_options.keys()),
+            index=0,
+        )
+    with col_date:
+        reference_date_val = st.date_input(
+            "Message Sent / Reference Date:",
+            value=datetime.date.today(),
+            help="Anchor timestamp used to ground relative deadlines ('tomorrow', 'by Wednesday', 'next Friday') into exact calendar dates.",
+            key="msg_ref_date_input",
+        )
+
+    st.caption(
+        f"**Temporal Grounding**: Relative dates ('tomorrow', 'by Wednesday') are mathematically grounded against "
+        f"**{reference_date_val.strftime('%A, %B %d, %Y')}** to calculate exact, unambiguous ISO calendar dates."
     )
     initial_text = sample_options[selected_sample]
 
@@ -190,8 +205,8 @@ with tab1:
                 st.error("Please provide non-empty text.")
                 st.stop()
 
-            # 1. Conservative Linguistic Extraction (Always runs independently of token limits)
-            candidates = extract_candidate_tasks(message_input)
+            # 1. Conservative Linguistic Extraction & Temporal Grounding
+            candidates = extract_candidate_tasks(message_input, reference_date=reference_date_val)
 
             # 2. Classifier Inference
             req_score = 0.0
@@ -333,7 +348,16 @@ with tab1:
                     task_type = cand.get("task_type", "Action Directive")
                     type_label = "Request (Delegated to Recipient)" if task_type == "Request" else "Commitment (Author's Promise)"
                     st.markdown(f"#### Task #{idx+1}: {cand['action_description']}")
-                    st.caption(f"**Type:** `{type_label}` | **Assignee:** `{cand['owner']}` | **Deadline:** `{cand['deadline']}`")
+                    
+                    # Temporal Grounding display
+                    dl_norm = cand.get("deadline_normalized", cand["deadline"])
+                    dl_raw = cand.get("deadline_literal", cand["deadline"])
+                    if cand.get("is_relative_deadline") and cand.get("deadline_iso"):
+                        dl_caption = f"**Due Date:** `{dl_norm}` *(Grounded from: \"{dl_raw}\" on {cand.get('anchor_date')})*"
+                    else:
+                        dl_caption = f"**Due Date:** `{dl_norm}`"
+
+                    st.caption(f"**Type:** `{type_label}` | **Assignee:** `{cand['owner']}` | {dl_caption}")
                     st.markdown(
                         f"**Source Evidence:** *\"{cand['evidence_text']}\"* "
                         f"(Exact Character Offsets: `[{cand['start_offset']}:{cand['end_offset']}]`)"
@@ -359,9 +383,10 @@ with tab1:
                         )
                     with col_edit3:
                         edit_deadline = st.text_input(
-                            f"Literal Deadline #{idx+1}",
-                            value=cand["deadline"],
+                            f"Confirmed Due Date #{idx+1}",
+                            value=dl_norm,
                             key=f"edit_deadline_{idx}",
+                            help=f"Grounded calendar date (derived from literal '{dl_raw}').",
                         )
 
                     save_candidate_btn = st.button(
@@ -596,7 +621,8 @@ with tab3:
                                 st.markdown(f"**Proposed Change:** {u['description']}")
                                 st.markdown(f"**Exact Source Evidence:** `{u['evidence_text']}`")
                                 if u["update_type"] == "deadline_revised":
-                                    st.markdown(f"Previous Deadline: `{selected_task['deadline']}` ➔ Proposed: `{u['new_value']}`")
+                                    proposed_target = u.get("new_value_normalized", u["new_value"])
+                                    st.markdown(f"Previous Deadline: `{selected_task['deadline']}` ➔ Grounded Target: `{proposed_target}` *(from \"{u['new_value']}\")*")
                                 elif u["update_type"] == "owner_revised":
                                     st.markdown(f"Previous Owner: `{selected_task['owner']}` ➔ Proposed: `{u['new_value']}`")
                                 elif u["update_type"] in ("completed", "cancelled"):
@@ -607,12 +633,14 @@ with tab3:
                                     f"Confirm & Apply Update",
                                     key=f"btn_apply_up_{u_idx}",
                                     type="primary",
+                                    help="Appends an immutable state transition record to SQLite.",
                                 )
                                 if apply_btn:
+                                    commit_val = u.get("new_value_normalized", u["new_value"]) if u["update_type"] == "deadline_revised" else u["new_value"]
                                     ok = task_store.apply_update(
                                         selected_task["task_id"],
                                         u["update_type"],
-                                        u["new_value"],
+                                        commit_val,
                                         u["evidence_text"],
                                         f_analysis["followup_text"],
                                     )

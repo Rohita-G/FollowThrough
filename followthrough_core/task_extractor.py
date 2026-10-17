@@ -5,8 +5,11 @@ linguistic patterns with exact character offset tracking.
 Note: This is a rule-based heuristic extractor, not a trained statistical NER model.
 """
 
+import datetime
 import re
 from typing import Any, Dict, List, Optional, Tuple
+
+from followthrough_core.temporal_normalizer import normalize_deadline, parse_header_date
 
 MONTHS = r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
 
@@ -100,8 +103,11 @@ def clean_action_title(sentence: str) -> str:
     return text
 
 
-def extract_candidate_tasks(text: str) -> List[Dict[str, Any]]:
-    """Extract candidate task/event objects with exact evidence and offsets.
+def extract_candidate_tasks(
+    text: str,
+    reference_date: Optional[datetime.date] = None,
+) -> List[Dict[str, Any]]:
+    """Extract candidate task/event objects with exact evidence, offsets, and normalized deadlines.
 
     Processes the full input text independently of classifier token limits.
     Produces:
@@ -109,12 +115,18 @@ def extract_candidate_tasks(text: str) -> List[Dict[str, Any]]:
     - task_type: 'Request' (delegated) or 'Commitment' (self-assigned promise)
     - owner: Explicit assignee or speaker pronoun ('Unspecified' if missing)
     - deadline: Literal date/deadline expression ('None specified' if missing)
+    - deadline_normalized: Grounded unambiguous calendar date (e.g., '2026-10-21 (Wed)')
+    - deadline_iso: Resolved ISO-8601 date (YYYY-MM-DD) or None
+    - anchor_date: Reference date used to ground relative expressions
     - evidence_text: Exact source substring
     - start_offset, end_offset: Exact character positions in the source text
     - uncertainty_flags: Explicit flags for missing owners, deadlines, or quoted text
     """
     quoted_start = find_quoted_boundary(text)
     candidates: List[Dict[str, Any]] = []
+
+    # Grounding anchor date: user-supplied > email header Date: > today
+    ref_date = reference_date or parse_header_date(text) or datetime.date.today()
 
     # Detect global greeting recipient and signoff sender for context-aware owner resolution
     m_rec = re.search(r"(?im)^\s*(?:hi|hello|dear|hey)?\s*([A-Z][a-z]+)\s*[,:]\s*$", text)
@@ -207,13 +219,15 @@ def extract_candidate_tasks(text: str) -> List[Dict[str, Any]]:
                 elif greeting_recipient:
                     owner = greeting_recipient
 
-        # 3. Literal Deadline Extraction
+        # 3. Literal Deadline Extraction & Temporal Grounding
         deadline: Optional[str] = None
         for dp in DATE_PATTERNS:
             m_date = dp.search(clean_sentence)
             if m_date:
                 deadline = m_date.group(0).strip()
                 break
+
+        norm_deadline = normalize_deadline(deadline or "None specified", anchor_date=ref_date)
 
         # 4. Uncertainty Flags
         flags: List[str] = []
@@ -233,6 +247,11 @@ def extract_candidate_tasks(text: str) -> List[Dict[str, Any]]:
             "task_type": task_type,
             "owner": owner or "Unspecified",
             "deadline": deadline or "None specified",
+            "deadline_literal": deadline or "None specified",
+            "deadline_normalized": norm_deadline["display_date"],
+            "deadline_iso": norm_deadline["iso_date"],
+            "anchor_date": ref_date.isoformat(),
+            "is_relative_deadline": norm_deadline["is_relative"],
             "evidence_text": evidence_substring,
             "start_offset": actual_start,
             "end_offset": actual_end,
