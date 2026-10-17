@@ -16,7 +16,7 @@ MONTHS = r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul
 # Pre-compiled regex patterns for date and deadline expressions
 DATE_PATTERNS = [
     re.compile(
-        rf"\b(by|before|on|until|due)\s+(?:end\s+of\s+day|EOD|COB|close\s+of\s+business|tomorrow(?:\s+morning|\s+afternoon|\s+evening)?|today(?:\s+morning|\s+afternoon|\s+evening)?|tonight|next\s+[A-Za-z]+|{MONTHS}(?:\s+\d{{1,2}})?|\d{{1,2}}/\d{{1,2}}(?:/\d{{2,4}})?|\d{{1,2}}(?::\d{{2}})?\s*(?:am|pm)|Friday|Monday|Tuesday|Wednesday|Thursday|Saturday|Sunday)\b",
+        rf"\b(?:by|before|on|until|due|for|at)\s+(?:end\s+of\s+day|EOD|COB|close\s+of\s+business|tomorrow(?:\s+morning|\s+afternoon|\s+evening|\s+eod|\s+cob)?|today(?:\s+morning|\s+afternoon|\s+evening|\s+eod|\s+cob)?|tonight|next\s+[A-Za-z]+(?:\s+at\s+\d{{1,2}}(?::\d{{2}})?\s*(?:am|pm)?)?|{MONTHS}(?:\s+\d{{1,2}})?|\d{{1,2}}/\d{{1,2}}(?:/\d{{2,4}})?|\d{{1,2}}(?::\d{{2}})?\s*(?:am|pm)|Friday|Monday|Tuesday|Wednesday|Thursday|Saturday|Sunday)\b",
         re.I,
     ),
     re.compile(r"\b(tomorrow|today|tonight|next\s+week|next\s+month)\b", re.I),
@@ -132,7 +132,10 @@ def extract_candidate_tasks(
     m_rec = re.search(r"(?im)^\s*(?:hi|hello|dear|hey)?\s*([A-Z][a-z]+)\s*[,:]\s*$", text)
     greeting_recipient = m_rec.group(1) if m_rec else None
 
-    m_send = re.search(r"(?im)^\s*(?:thanks|thank you|regards|best regards|sincerely|cheers),?\s*\n\s*([A-Z][a-z]+)\s*$", text)
+    m_send = re.search(
+        r"(?im)^\s*(?:thanks|thank you|regards|best regards|best|kind regards|warm regards|all the best|sincerely|cheers),?\s*\n\s*([A-Z][a-z]+)\s*$",
+        text,
+    )
     signoff_sender = m_send.group(1) if m_send else None
 
     # Iterate over sentences while preserving exact character offsets

@@ -106,7 +106,7 @@ def normalize_deadline(
 
     anchor = anchor_date or datetime.date.today()
     cleaned = literal_phrase.strip()
-    norm = re.sub(r"^(?:by|before|on|until|due)\s+", "", cleaned, flags=re.I).strip()
+    norm = re.sub(r"^(?:by|before|on|until|due|for|at)\s+", "", cleaned, flags=re.I).strip()
 
     # Detect optional time: e.g. "2 PM", "5:30 PM", "14:00"
     time_str: Optional[str] = None
