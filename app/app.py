@@ -30,8 +30,11 @@ if str(REPO_ROOT) not in sys.path:
 from followthrough_core.task_extractor import extract_candidate_tasks
 from followthrough_core.task_store import TaskStore
 from followthrough_core.followup_linker import FollowupLinker
-from followthrough_core.long_message_classifier import classify_long_message
-from followthrough_core.calendar_sync import generate_google_calendar_url, generate_ics_content
+from followthrough_core.calendar_sync import (
+    generate_google_calendar_url,
+    generate_ics_content,
+    parse_deadline_to_datetimes,
+)
 
 # Model & Evaluation Paths
 DISTILBERT_DIR = REPO_ROOT / "models" / "distilbert_fine_tuned"
@@ -718,11 +721,49 @@ with tab2:
 
         st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
 
-        filter_col, _ = st.columns([1, 2])
-        with filter_col:
-            status_filter = st.selectbox("Filter Status:", ["All", "pending", "completed", "cancelled"], index=0)
+        # Filter, Search & Urgency Sort Controls
+        unique_owners = sorted(list(set(t.get("owner", "Unspecified") for t in tasks if t.get("owner"))))
 
-        filtered_tasks = tasks if status_filter == "All" else [t for t in tasks if t["status"] == status_filter]
+        f_col1, f_col2, f_col3, f_col4 = st.columns([1, 1, 1.3, 1.4])
+        with f_col1:
+            status_filter = st.selectbox("Status:", ["All", "Pending", "Completed", "Cancelled"], index=0)
+        with f_col2:
+            owner_filter = st.selectbox("Assignee:", ["All"] + unique_owners, index=0)
+        with f_col3:
+            sort_choice = st.selectbox("Sort By:", ["Upcoming Deadline", "Date Added (Newest)", "Date Added (Oldest)"], index=0)
+        with f_col4:
+            search_query = st.text_input("Search:", placeholder="Title, assignee, evidence...")
+
+        # Apply filtering
+        filtered_tasks = []
+        for t in tasks:
+            if status_filter != "All" and t["status"].lower() != status_filter.lower():
+                continue
+            if owner_filter != "All" and t.get("owner", "") != owner_filter:
+                continue
+            if search_query.strip():
+                q = search_query.strip().lower()
+                blob = f"{t.get('action_description', '')} {t.get('owner', '')} {t.get('deadline', '')} {t.get('evidence_text', '')} {t.get('thread_title', '')}".lower()
+                if q not in blob:
+                    continue
+            filtered_tasks.append(t)
+
+        # Apply sorting
+        if sort_choice == "Upcoming Deadline":
+            def _deadline_sort_key(item):
+                dl = item.get("deadline", "")
+                if not dl or dl.lower() == "none specified":
+                    return datetime.datetime(2099, 12, 31)
+                start_dt, _, _ = parse_deadline_to_datetimes(dl, default_anchor=reference_date_val)
+                return start_dt
+            filtered_tasks.sort(key=_deadline_sort_key)
+        elif sort_choice == "Date Added (Oldest)":
+            filtered_tasks.sort(key=lambda item: item.get("created_at", ""))
+        else:
+            filtered_tasks.sort(key=lambda item: item.get("created_at", ""), reverse=True)
+
+        if not filtered_tasks:
+            st.info("No tasks match the active filters.")
 
         for t in filtered_tasks:
             is_done = t["status"] == "completed"
@@ -736,16 +777,30 @@ with tab2:
             # Derive source email metadata
             thread_title, sender_name = derive_source_metadata(t.get("source_text", ""), t.get("thread_title", ""))
 
+            # Check Overdue Status
+            is_overdue = False
+            if t["status"] == "pending" and t.get("deadline") and t["deadline"].lower() != "none specified":
+                t_dt, _, _ = parse_deadline_to_datetimes(t["deadline"], default_anchor=reference_date_val)
+                if t_dt.date() < reference_date_val:
+                    is_overdue = True
+
             # Status pill styling
             if is_done:
                 s_bg, s_fg, s_border = "#ECFDF5", "#065F46", "#A7F3D0"
                 card_border = "#059669"
+                status_display = "COMPLETED"
             elif is_cancel:
                 s_bg, s_fg, s_border = "#F1F5F9", "#475569", "#CBD5E1"
                 card_border = "#94A3B8"
+                status_display = "DISMISSED"
+            elif is_overdue:
+                s_bg, s_fg, s_border = "#FEE2E2", "#B91C1C", "#FCA5A5"
+                card_border = "#EF4444"
+                status_display = "OVERDUE"
             else:
                 s_bg, s_fg, s_border = "#FEF3C7", "#92400E", "#FCD34D"
                 card_border = "#4F46E5"
+                status_display = "PENDING"
 
             title_style = "text-decoration: line-through; color: #94A3B8;" if is_done else "color: #1E293B;"
 
@@ -784,14 +839,14 @@ with tab2:
                     </div>
                     <!-- Status Badge -->
                     <div style="background:{s_bg}; color:{s_fg}; border:1px solid {s_border}; border-radius:16px; padding:3px 10px; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; flex-shrink:0;">
-                        {t['status']}
+                        {status_display}
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-            # Source Message Viewer & History Expanders
-            col_act1, col_act2 = st.columns([1, 1])
+            # 3 Collapsible Action Sections: Evidence, History, and Edit
+            col_act1, col_act2, col_act3 = st.columns([1, 1, 1])
             with col_act1:
                 with st.expander(f"Source Message & Evidence (ID: {t['task_id'][:12]})", expanded=False):
                     src_full = t.get("source_text", "")
@@ -799,7 +854,6 @@ with tab2:
                     st.markdown(f"**Email Origin:** `{thread_title}` (Sender: **{sender_name}**)")
                     st.markdown(f"**Target Slice:** *\"{ev}\"* `[{t.get('start_offset', 0)}:{t.get('end_offset', len(ev))}]`")
 
-                    # Highlight the exact sentence inside the complete original email
                     if ev and ev in src_full:
                         parts = src_full.split(ev, 1)
                         before_clean = html.escape(parts[0]).replace("\n", "<br>")
@@ -821,6 +875,16 @@ with tab2:
                 with st.expander(f"Audit History ({len(history)})", expanded=False):
                     for h in history:
                         st.markdown(f"- **{h['timestamp'][:16]}** | `{h['update_type']}` | `{h['old_value']}` -> `{h['new_value']}`")
+
+            with col_act3:
+                with st.expander("Edit Task Details", expanded=False):
+                    edit_b_desc = st.text_input("Description", value=t["action_description"], key=f"e_desc_{t['task_id']}")
+                    edit_b_owner = st.text_input("Assignee", value=t["owner"], key=f"e_owner_{t['task_id']}")
+                    edit_b_dl = st.text_input("Due Date", value=t["deadline"], key=f"e_dl_{t['task_id']}")
+                    if st.button("Save Changes", key=f"btn_save_edit_{t['task_id']}", type="primary", use_container_width=True):
+                        task_store.update_task_details(t["task_id"], edit_b_desc, edit_b_owner, edit_b_dl)
+                        st.success("Task details updated in ledger.")
+                        st.rerun()
 
             # Quick Status & Calendar Action Buttons
             btn_done_col, btn_cancel_col, btn_gcal_col, btn_ics_col = st.columns([1, 1, 1.4, 1])
@@ -947,18 +1011,33 @@ with tab3:
                 </div>
                 """, unsafe_allow_html=True)
 
+            top_score = ranked[0]["similarity_score"] if ranked else 0.0
+            top_pct = int(top_score * 100)
+
             # Update Proposal
             st.divider()
             st.markdown("### Review & Apply Detected Changes")
 
-            selected_task_id = st.selectbox(
-                "Confirm Matching Task:",
-                task_options,
-                format_func=lambda tid: f"{tid} - {next((r['task']['action_description'] for r in ranked if r['task']['task_id'] == tid), tid)}",
-                key="select_confirmed_match",
-            )
+            if top_score < 0.25:
+                st.warning(
+                    f"Low match confidence ({top_pct}%): This message does not appear closely related to any active task in your ledger. "
+                    "Safety lock is active to prevent accidental task corruption."
+                )
+                allow_apply = st.checkbox("I verify this is the intended task (override safety lock)", value=False, key="override_safety_lock")
+            else:
+                allow_apply = True
 
-            selected_task = task_store.get_task(selected_task_id) if selected_task_id else None
+            if allow_apply:
+                selected_task_id = st.selectbox(
+                    "Confirm Matching Task:",
+                    task_options,
+                    format_func=lambda tid: f"{tid} - {next((r['task']['action_description'] for r in ranked if r['task']['task_id'] == tid), tid)}",
+                    key="select_confirmed_match",
+                )
+
+                selected_task = task_store.get_task(selected_task_id) if selected_task_id else None
+            else:
+                selected_task = None
 
             if selected_task:
                 updates = f_analysis["updates"]

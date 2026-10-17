@@ -125,8 +125,9 @@ def extract_candidate_tasks(
     quoted_start = find_quoted_boundary(text)
     candidates: List[Dict[str, Any]] = []
 
-    # Grounding anchor date: user-supplied > email header Date: > today
-    ref_date = reference_date or parse_header_date(text) or datetime.date.today()
+    # Grounding anchor date: prefer explicit email header Date/Sent, then reference_date, then today
+    header_dt = parse_header_date(text)
+    ref_date = header_dt or reference_date or datetime.date.today()
 
     # Detect global greeting recipient and signoff sender for context-aware owner resolution
     m_rec = re.search(r"(?im)^\s*(?:hi|hello|dear|hey)?\s*([A-Z][a-z]+)\s*[,:]\s*$", text)
@@ -156,6 +157,14 @@ def extract_candidate_tasks(
 
         # Skip passive generic chitchat
         if re.search(r"^let me know if\b", clean_sentence, re.I):
+            continue
+
+        # Skip legal footers, confidentiality disclaimers, and environmental print notices
+        if re.search(
+            r"\b(?:confidential|intended solely|received this (?:e-?mail|message) in error|notify the sender|system manager|opinions presented|consider the environment before printing)\b",
+            clean_sentence,
+            re.I,
+        ):
             continue
 
         actual_start = start_char + leading_ws

@@ -183,11 +183,13 @@ class TaskStore:
             elif update_type == "owner_revised":
                 old_val = task["owner"] or "Unspecified"
                 cursor.execute("UPDATE tasks SET owner = ? WHERE task_id = ?", (new_value, task_id))
-            elif update_type in ("completed", "cancelled"):
+            elif update_type in ("completed", "cancelled", "pending"):
                 old_val = task["status"]
                 cursor.execute("UPDATE tasks SET status = ? WHERE task_id = ?", (update_type, task_id))
             elif update_type == "followup_linked":
                 old_val = "linked"
+            elif update_type == "task_edited":
+                old_val = "edited"
             else:
                 return False
 
@@ -203,6 +205,44 @@ class TaskStore:
                 new_value,
                 evidence_text,
                 followup_text,
+            ))
+            conn.commit()
+            return True
+
+    def update_task_details(
+        self,
+        task_id: str,
+        action_description: str,
+        owner: str,
+        deadline: str,
+        edit_reason: str = "Manual edit",
+    ) -> bool:
+        """Manually update task description, owner, and deadline with full audit trail logging."""
+        task = self.get_task(task_id)
+        if not task:
+            return False
+
+        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        old_summary = f"due: '{task['deadline']}', owner: '{task['owner']}'"
+        new_summary = f"due: '{deadline}', owner: '{owner}'"
+
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE tasks SET action_description = ?, owner = ?, deadline = ? WHERE task_id = ?",
+                (action_description.strip(), owner.strip(), deadline.strip(), task_id),
+            )
+            cursor.execute("""
+                INSERT INTO task_history (
+                    task_id, timestamp, update_type, old_value, new_value, evidence_text, followup_text
+                ) VALUES (?, ?, 'task_edited', ?, ?, ?, ?)
+            """, (
+                task_id,
+                now_iso,
+                old_summary,
+                new_summary,
+                edit_reason,
+                "Manual board adjustment",
             ))
             conn.commit()
             return True

@@ -119,9 +119,77 @@ def test_semantic_ranking_behavior():
     assert ranked[0]["similarity_score"] > 0.4
 
 
+def test_update_task_details_audit_log():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "test_tasks.db"
+        store = TaskStore(db_path)
+
+        task_data = {
+            "source_text": "Please prepare the presentation for tomorrow.",
+            "action_description": "Prepare the presentation",
+            "owner": "Shirley",
+            "deadline": "2026-10-18 (Sun)",
+            "evidence_text": "Please prepare the presentation for tomorrow.",
+            "start_offset": 0,
+            "end_offset": 46,
+        }
+        ok, task_id = store.save_task(task_data)
+        assert ok is True
+
+        # Manually update task details
+        update_ok = store.update_task_details(
+            task_id,
+            action_description="Prepare the executive board presentation",
+            owner="David",
+            deadline="2026-10-20 (Tue)",
+            edit_reason="Adjusted scope and assignee",
+        )
+        assert update_ok is True
+
+        # Verify task values
+        updated = store.get_task(task_id)
+        assert updated["action_description"] == "Prepare the executive board presentation"
+        assert updated["owner"] == "David"
+        assert updated["deadline"] == "2026-10-20 (Tue)"
+
+        # Verify audit history
+        hist = store.get_history(task_id)
+        assert len(hist) == 2  # created + task_edited
+        edit_entry = hist[1]
+        assert edit_entry["update_type"] == "task_edited"
+        assert "due: '2026-10-18 (Sun)'" in edit_entry["old_value"]
+        assert "due: '2026-10-20 (Tue)'" in edit_entry["new_value"]
+        assert edit_entry["evidence_text"] == "Adjusted scope and assignee"
+
+
+def test_disclaimer_stripping_and_header_date():
+    text = (
+        "Date: Monday, Oct 19, 2026 09:00 AM\n"
+        "From: Alice <alice@example.com>\n"
+        "To: Bob <bob@example.com>\n"
+        "Subject: Project Kickoff\n\n"
+        "Hi Bob,\n\n"
+        "Please send over the revised wireframes by Wednesday afternoon.\n\n"
+        "CONFIDENTIALITY NOTICE: This transmission is confidential and intended solely for the recipient. "
+        "If you have received this message in error, please notify the sender immediately and delete it.\n"
+        "Please consider the environment before printing this email."
+    )
+    candidates = extract_candidate_tasks(text)
+    # Exactly 1 real task should be extracted: "Please send over the revised wireframes by Wednesday afternoon."
+    # The confidentiality disclaimer and environment notice must NOT be extracted as candidate tasks.
+    assert len(candidates) == 1
+    c = candidates[0]
+    assert "2026-10-21" in c["deadline_normalized"]  # Anchored to header date Oct 19 (Wednesday is Oct 21)
+    assert "Wednesday" in c["deadline_literal"]
+    assert c["owner"].lower() == "bob"
+
+
 if __name__ == "__main__":
     test_evidence_offsets_exact_match()
     test_persistence_and_deduplication()
     test_update_history_and_no_thanks_completion()
     test_semantic_ranking_behavior()
+    test_update_task_details_audit_log()
+    test_disclaimer_stripping_and_header_date()
     print("All synthetic task workflow tests passed successfully!")
+
