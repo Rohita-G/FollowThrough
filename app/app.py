@@ -132,26 +132,39 @@ with tab1:
     )
 
     sample_options = {
-        "Sample 1: Quarterly Budget (Request + Commitment + Deadline)": (
+        "Realistic Scenario 1: Cross-Functional Team Email (Multiple Owners & Deadlines)": (
+            "Hi Team,\n\n"
+            "Great job on the client presentation yesterday. The feedback from Acme Corp was overwhelmingly positive, especially regarding our new analytics dashboard. They want to move ahead with the enterprise pilot, but there are several blocking items we must resolve first.\n\n"
+            "David, please update the security architecture diagram to reflect the SOC2 compliance controls by Wednesday.\n"
+            "Sarah, can you please coordinate with the QA team to run the load testing benchmark before Friday?\n"
+            "Also, I will schedule a briefing with the legal and contract department tomorrow to review the Master Services Agreement.\n\n"
+            "General status note: the staging environment will be under maintenance on Saturday.\n\n"
+            "Thanks,\nMarcus"
+        ),
+        "Realistic Scenario 2: DevOps & Cloud Incident Response (On-Call Action Items)": (
+            "Team,\n\n"
+            "Following up on the production outage earlier this morning. The database failover completed, but customer traffic is still seeing elevated latency on the auth service.\n\n"
+            "Elena, please investigate the connection pool saturation on the primary Redis cluster before 2 PM.\n"
+            "Mark, can you deploy the hotfix patch to staging and verify the latency metrics by end of day?\n"
+            "I will draft the preliminary post-mortem summary for executive leadership by tomorrow morning.\n\n"
+            "Note: no further schema migrations should be executed until we stabilize the cluster.\n\n"
+            "Regards,\nAlex"
+        ),
+        "Realistic Scenario 3: Enterprise Contract Negotiation (Quoted Forward Thread)": (
+            "Vince,\n\n"
+            "Please review the revised indemnification and confidentiality clauses by tomorrow 5 PM.\n"
+            "I will follow up with accounting tomorrow to confirm the wire transfer schedule.\n\n"
+            "---------------------- Forwarded by Vince J Kaminski/HOU/ECT on 05/07/2001 12:28 PM ---------------------------\n"
+            "From: external-counsel@lawfirm.com\n"
+            "Sent: Friday, May 04, 2001 5:26 PM\n"
+            "Subject: Boilerplate Warranty Notice\n\n"
+            "Please make sure to sign the original 1999 agreement.\n"
+        ),
+        "Short Example: Standup Directives (Request + Commitment)": (
             "Hi Shirley,\n\n"
-            "Please prepare the finalized quarterly budget report by Thursday afternoon.\n"
+            "Please prepare the finalized quarterly budget report by Thursday.\n"
             "I will follow up with accounting tomorrow to get the updated ledger numbers.\n\n"
             "Thanks,\nPhillip"
-        ),
-        "Sample 2: Email with Forwarded Chain (Demonstrating Clean Task Extraction)": (
-            "Vince,\n\n"
-            "Please review this draft contract agreement by tomorrow 5 PM.\n"
-            "I will follow up with legal to verify the indemnity terms.\n\n"
-            "---------------------- Forwarded by Vince J Kaminski/HOU/ECT on 05/07/2001 12:28 PM ---------------------------\n"
-            "From: contractor-relations@enron.com\n"
-            "Sent: Friday, May 04, 2001 5:26 PM\n"
-            "Subject: Old 1999 boilerplate terms...\n"
-        ),
-        "Sample 3: IT Engineering Task (Assignee + Strict Deadline)": (
-            "Alex,\n\n"
-            "Could you verify the server deployment logs before Friday?\n"
-            "We need to submit the security compliance report to the auditors.\n\n"
-            "Best regards,\nSarah"
         ),
         "Custom Message (Type / Paste Your Own)": "",
     }
@@ -166,7 +179,7 @@ with tab1:
     message_input = st.text_area(
         "Paste Email / Message:",
         value=initial_text,
-        height=140,
+        height=220,
         key=f"msg_input_{selected_sample[:8]}",
     )
     analyze_btn = st.button("Analyze Message", type="primary")
@@ -473,9 +486,10 @@ with tab3:
         st.warning("No saved tasks found. Please create and confirm a task in Tab 1 before linking follow-ups.")
     else:
         followup_presets = {
-            "Follow-up 1: Deadline Extension & Reassignment": "We have postponed the quarterly budget report to next Monday. Mike will review.",
-            "Follow-up 2: Task Completion": "I have finished preparing the finalized quarterly report and submitted it to the team.",
-            "Follow-up 3: Reassignment": "Shirley is out of the office, so David will prepare the report instead.",
+            "Follow-up 1 (DevOps Incident): Elena Completed Redis Saturation Investigation": "Elena has finished investigating the Redis connection pool saturation; connection limits have been stabilized.",
+            "Follow-up 2 (Sprint Update): David Requesting Deadline Postponement": "We have postponed the security architecture diagram to next Monday. David will coordinate with compliance.",
+            "Follow-up 3 (Task Completion): Quarterly Budget Submitted": "I have finished preparing the finalized quarterly report and submitted it to the team.",
+            "Follow-up 4 (Reassignment): Task Delegated to Alternate Owner": "Sarah is out of the office, so Alex will run the load testing benchmark instead.",
             "Custom Follow-up (Type / Paste Your Own)": "",
         }
 
