@@ -81,37 +81,53 @@ def load_baseline(model_path: Path) -> Optional[Dict[str, Any]]:
 # -------------------------------------------------------------
 # UI Configuration
 # -------------------------------------------------------------
-st.set_page_config(page_title="FollowThrough Task Tracker", layout="wide")
-st.title("FollowThrough: Evidence-Backed Conversational Task & State Tracker")
-st.caption("Turn messages into evidence-backed tasks, persist change history in SQLite, and track confirmed updates across follow-ups.")
+st.set_page_config(page_title="FollowThrough", page_icon="✓", layout="wide")
 
 task_store = get_task_store()
 followup_linker = get_followup_linker()
 
-# Sidebar: Research Details & Classifier Options
+# Sidebar: Executive Overview & Collapsible AI Inspector
 with st.sidebar:
-    st.subheader("System Architecture")
-    st.markdown("""
-**Core Methodology**:
-- **Sequence Classifiers**: DistilBERT / TF-IDF for Request and Commitment signals. Advisory scores only; never gates extraction.
-- **Pretrained Semantic Similarity**: `all-MiniLM-L6-v2` compares follow-ups to saved tasks.
-- **Linguistic Extraction**: Conservative patterns for action verbs, explicit owners, literal dates, and offsets.
-- **Verified Ledger**: SQLite database with append-only transition history.
-    """)
+    st.subheader("FollowThrough")
+    st.caption("Intelligent Email Task & Follow-up Tracker")
 
-    with st.expander("Classifier Configuration", expanded=False):
+    all_tasks = task_store.list_tasks()
+    pending_count = sum(1 for t in all_tasks if t.get("status") == "pending")
+    completed_count = sum(1 for t in all_tasks if t.get("status") == "completed")
+
+    stat_col1, stat_col2 = st.columns(2)
+    with stat_col1:
+        st.metric("Pending Tasks", pending_count)
+    with stat_col2:
+        st.metric("Completed", completed_count)
+
+    st.divider()
+
+    # Optional Technical Diagnostics drawer
+    with st.expander("AI Engine & Diagnostics", expanded=False):
+        st.caption("Underlying models and configuration parameters:")
         model_choice = st.radio(
-            "Supporting Classifier:",
+            "Classification Model:",
             ("DistilBERT (Fine-tuned)", "TF-IDF + Logistic Regression"),
             index=0,
         )
         classifier_mode = st.radio(
-            "Classifier Inference Mode:",
+            "Inference Window:",
             ("Original (128-token truncated)", "Full-message sliding window"),
             index=0,
-            help="Full-message mode uses overlapping 128-token windows. Message aggregation is an experimental heuristic.",
         )
+        st.markdown("""
+        **Pipeline Architecture**:
+        - Multi-label sequence classification (Request/Commitment)
+        - Rule-based action, owner, and deadline extraction
+        - Temporal grounding to ISO calendar dates
+        - Pretrained semantic similarity (`all-MiniLM-L6-v2`)
+        - SQLite verified audit ledger
+        """)
 
+# Header
+st.title("FollowThrough")
+st.caption("Transform workplace messages into verified tasks, assign owners, ground deadlines, and track follow-ups.")
 
 # -------------------------------------------------------------
 # Main Tabs: 1. New Task | 2. My Tasks | 3. Follow-up
@@ -126,11 +142,8 @@ tab1, tab2, tab3 = st.tabs([
 # TAB 1: New Task
 # -------------------------------------------------------------
 with tab1:
-    st.subheader("Extract Task from Email or Message")
-    st.markdown(
-        "Paste an email or workplace message to detect request/commitment signals, "
-        "extract candidate actions with exact source evidence, and save verified tasks."
-    )
+    st.subheader("Extract Action Items")
+    st.caption("Paste an email or team update to extract action items, assignees, and calendar deadlines.")
 
     sample_options = {
         "Realistic Scenario 1: Cross-Functional Team Email (Multiple Owners & Deadlines)": (
@@ -173,31 +186,28 @@ with tab1:
     col_sample, col_date = st.columns([2, 1])
     with col_sample:
         selected_sample = st.selectbox(
-            "Choose a sample scenario or enter your own:",
+            "Select Scenario or Enter Custom:",
             list(sample_options.keys()),
             index=0,
         )
     with col_date:
         reference_date_val = st.date_input(
-            "Message Sent / Reference Date:",
+            "Email Sent / Anchor Date:",
             value=datetime.date.today(),
-            help="Anchor timestamp used to ground relative deadlines ('tomorrow', 'by Wednesday', 'next Friday') into exact calendar dates.",
+            help="Reference date used to resolve relative deadlines ('tomorrow', 'by Wednesday', 'next Friday') into exact calendar dates.",
             key="msg_ref_date_input",
         )
 
-    st.caption(
-        f"**Temporal Grounding**: Relative dates ('tomorrow', 'by Wednesday') are mathematically grounded against "
-        f"**{reference_date_val.strftime('%A, %B %d, %Y')}** to calculate exact, unambiguous ISO calendar dates."
-    )
     initial_text = sample_options[selected_sample]
 
     message_input = st.text_area(
-        "Paste Email / Message:",
+        "Message Text:",
         value=initial_text,
-        height=220,
+        height=200,
         key=f"msg_input_{selected_sample[:8]}",
+        placeholder="Paste workplace message or email thread...",
     )
-    analyze_btn = st.button("Analyze Message", type="primary")
+    analyze_btn = st.button("Extract Action Items", type="primary")
 
     if analyze_btn or "last_msg_analysis" in st.session_state:
         if analyze_btn:
@@ -220,7 +230,6 @@ with tab1:
             long_msg_result = None
 
             if "DistilBERT" in model_choice:
-                # Resolve checkpoint path
                 ckpt_path = DISTILBERT_DIR if DISTILBERT_DIR.exists() else (
                     DISTILBERT_FALLBACK_DIR if DISTILBERT_FALLBACK_DIR.exists() else DISTILBERT_TUNED_DIR
                 )
@@ -257,7 +266,6 @@ with tab1:
                         req_pred = long_msg_result["req_pred"]
                         com_pred = long_msg_result["com_pred"]
                 else:
-                    # Fallback advisory score heuristic when checkpoint binary is uncommitted
                     has_req = any("please" in c["action_description"].lower() or "could you" in c["action_description"].lower() for c in candidates)
                     has_com = any("i will" in c["action_description"].lower() or "we will" in c["action_description"].lower() for c in candidates)
                     req_score, com_score = (0.85 if has_req else 0.15), (0.80 if has_com else 0.10)
@@ -299,74 +307,32 @@ with tab1:
 
         analysis = st.session_state["last_msg_analysis"]
 
-        if analysis.get("truncated"):
-            st.warning(
-                f"Truncation Notice: Input contains {analysis['token_count']} tokens. "
-                f"Original mode processed the first {MAX_LENGTH} tokens. "
-                f"(Switch to 'Full-message sliding window' mode in sidebar to analyze all tokens)."
-            )
-
-        # Supporting Classifier Scores
-        with st.expander("Supporting Classifier Predictions (Non-gating)", expanded=True):
-            sc1, sc2 = st.columns(2)
-            with sc1:
-                st.metric(
-                    label=f"Request Prediction (Threshold: {analysis['req_thresh']})",
-                    value="YES (1)" if analysis["req_pred"] == 1 else "NO (0)",
-                    delta=f"Model score: {analysis['req_score']:.4f}",
-                )
-            with sc2:
-                st.metric(
-                    label=f"Commitment Prediction (Threshold: {analysis['com_thresh']})",
-                    value="YES (1)" if analysis["com_pred"] == 1 else "NO (0)",
-                    delta=f"Model score: {analysis['com_score']:.4f}",
-                )
-
-            if analysis.get("long_msg_result"):
-                lm = analysis["long_msg_result"]
-                st.info(f"**Aggregation Note**: {lm['aggregation_label']}. Total tokens: {lm['total_tokens']}, Windows: {lm['num_windows']}.")
-                with st.expander(f"View Per-Window Breakdown ({lm['num_windows']} windows)", expanded=False):
-                    for w in lm["windows"]:
-                        st.markdown(
-                            f"**Window #{w['window_index']+1}** (Tokens: `{w['token_start']}-{w['token_end']}`, "
-                            f"Chars: `[{w['char_start']}:{w['char_end']}]`) | "
-                            f"Req: `{w['req_score']:.4f}` | Com: `{w['com_score']:.4f}`"
-                        )
-                        st.caption(f"Source: \"{w['source_text']}\"")
-            else:
-                st.caption("Raw scores are uncalibrated probabilities. These predictions inform the user but do not block task extraction.")
-
-        # Candidate Tasks Display & User Review
-        st.markdown("### Suggested Tasks (Conservative Linguistic Extraction)")
+        # Action Items Display (Immediate, Clean, Professional)
+        st.markdown("### Suggested Action Items")
         candidates = analysis["candidates"]
         if not candidates:
-            st.info("No explicit action candidate was detected with conservative linguistic rules.")
+            st.info("No actionable directives or commitments were found in this message.")
         else:
-            st.caption("Review and edit suggested task fields before saving. Missing fields are never invented.")
+            st.caption("Review extracted task parameters below and confirm to save to your board.")
             for idx, cand in enumerate(candidates):
                 with st.container(border=True):
                     task_type = cand.get("task_type", "Action Directive")
-                    type_label = "Request (Delegated to Recipient)" if task_type == "Request" else "Commitment (Author's Promise)"
+                    type_label = "Delegated Request" if task_type == "Request" else "Author Commitment"
                     st.markdown(f"#### Task #{idx+1}: {cand['action_description']}")
-                    
+
                     # Temporal Grounding display
                     dl_norm = cand.get("deadline_normalized", cand["deadline"])
                     dl_raw = cand.get("deadline_literal", cand["deadline"])
                     if cand.get("is_relative_deadline") and cand.get("deadline_iso"):
-                        dl_caption = f"**Due Date:** `{dl_norm}` *(Grounded from: \"{dl_raw}\" on {cand.get('anchor_date')})*"
+                        dl_caption = f"**Due Date:** `{dl_norm}` *(Grounded from: \"{dl_raw}\")*"
                     else:
                         dl_caption = f"**Due Date:** `{dl_norm}`"
 
                     st.caption(f"**Type:** `{type_label}` | **Assignee:** `{cand['owner']}` | {dl_caption}")
                     st.markdown(
                         f"**Source Evidence:** *\"{cand['evidence_text']}\"* "
-                        f"(Exact Character Offsets: `[{cand['start_offset']}:{cand['end_offset']}]`)"
+                        f"(Offsets: `[{cand['start_offset']}:{cand['end_offset']}]`)"
                     )
-                    flags = cand.get("uncertainty_flags", [])
-                    if flags:
-                        st.markdown("**Uncertainty Flags:** " + " ".join([f"`{flag}`" for flag in flags]))
-                    else:
-                        st.markdown("**Uncertainty Flags:** `none` (explicit action, owner, and deadline present)")
 
                     col_edit1, col_edit2, col_edit3 = st.columns([2, 1, 1])
                     with col_edit1:
@@ -377,20 +343,19 @@ with tab1:
                         )
                     with col_edit2:
                         edit_owner = st.text_input(
-                            f"Explicit Owner #{idx+1}",
+                            f"Assignee #{idx+1}",
                             value=cand["owner"],
                             key=f"edit_owner_{idx}",
                         )
                     with col_edit3:
                         edit_deadline = st.text_input(
-                            f"Confirmed Due Date #{idx+1}",
+                            f"Due Date #{idx+1}",
                             value=dl_norm,
                             key=f"edit_deadline_{idx}",
-                            help=f"Grounded calendar date (derived from literal '{dl_raw}').",
                         )
 
                     save_candidate_btn = st.button(
-                        f"Confirm & Save Task #{idx+1}",
+                        f"Save Task #{idx+1} to Board",
                         key=f"btn_save_cand_{idx}",
                         type="primary",
                     )
@@ -406,9 +371,30 @@ with tab1:
                         }
                         ok, res_msg = task_store.save_task(task_record)
                         if ok:
-                            st.success(f"Task successfully saved to ledger! Task ID: `{res_msg}`")
+                            st.success(f"Task saved to board! Reference: `{res_msg}`")
                         else:
                             st.warning(f"Could not save task: {res_msg}")
+
+        # Optional Collapsible Diagnostics (For Instructors / Model Auditing)
+        with st.expander("AI Confidence & Model Diagnostics", expanded=False):
+            st.caption("Inspect underlying classifier predictions and tokenization details:")
+            sc1, sc2 = st.columns(2)
+            with sc1:
+                st.metric(
+                    label=f"Request Probability (Threshold: {analysis['req_thresh']})",
+                    value=f"{analysis['req_score']:.4f}",
+                    delta="Detected" if analysis["req_pred"] == 1 else "Not Detected",
+                )
+            with sc2:
+                st.metric(
+                    label=f"Commitment Probability (Threshold: {analysis['com_thresh']})",
+                    value=f"{analysis['com_score']:.4f}",
+                    delta="Detected" if analysis["com_pred"] == 1 else "Not Detected",
+                )
+
+            if analysis.get("long_msg_result"):
+                lm = analysis["long_msg_result"]
+                st.caption(f"Sliding window aggregation: {lm['aggregation_label']} across {lm['num_windows']} windows (Total Tokens: {lm['total_tokens']}).")
 
 
 # -------------------------------------------------------------
@@ -416,99 +402,94 @@ with tab1:
 # -------------------------------------------------------------
 with tab2:
     st.subheader("My Tasks")
+    st.caption("Verified tasks extracted from conversations with full history and evidence.")
     tasks = task_store.list_tasks()
 
     if not tasks:
-        st.info("No saved tasks in database yet. Create and confirm tasks in Tab 1.")
+        st.info("No saved tasks yet. Extract and save tasks in Tab 1.")
     else:
-        st.caption(f"Total tasks stored: {len(tasks)}. All state updates and revision histories are tracked.")
-
-        status_filter = st.selectbox("Filter by Status:", ["All", "pending", "completed", "cancelled"], index=0)
+        status_filter = st.selectbox("Filter Status:", ["All", "pending", "completed", "cancelled"], index=0)
         filtered_tasks = tasks if status_filter == "All" else [t for t in tasks if t["status"] == status_filter]
 
         for t in filtered_tasks:
             with st.container(border=True):
                 head_col1, head_col2 = st.columns([3, 1])
                 with head_col1:
-                    st.markdown(f"### `{t['task_id']}` — {t['action_description']}")
+                    st.markdown(f"#### {t['action_description']}")
+                    st.caption(f"Task ID: `{t['task_id']}`")
                 with head_col2:
-                    st.markdown(f"**Status:** `{t['status'].upper()}`")
+                    status_badge = t["status"].upper()
+                    st.markdown(f"**Status:** `{status_badge}`")
 
                 det_col1, det_col2, det_col3 = st.columns(3)
                 with det_col1:
-                    st.markdown(f"**Owner:** `{t['owner']}`")
+                    st.markdown(f"**Assignee:** `{t['owner']}`")
                 with det_col2:
-                    st.markdown(f"**Deadline:** `{t['deadline']}`")
+                    st.markdown(f"**Due Date:** `{t['deadline']}`")
                 with det_col3:
-                    st.markdown(f"**Created (UTC):** `{t['created_at'][:19]}`")
+                    st.markdown(f"**Created:** `{t['created_at'][:10]}`")
 
-                # Expandable Evidence
-                with st.expander("Source Evidence", expanded=False):
-                    st.markdown(f"**Evidence Text:** `{t['evidence_text']}`")
-                    st.caption(f"Offsets: `[{t['start_offset']}:{t['end_offset']}]` in original message.")
+                # Expandable Details
+                col_exp1, col_exp2 = st.columns(2)
+                with col_exp1:
+                    with st.expander("Source Evidence Quote", expanded=False):
+                        st.markdown(f"*\"{t['evidence_text']}\"*")
+                        st.caption(f"Character offsets: `[{t['start_offset']}:{t['end_offset']}]`")
+                with col_exp2:
+                    history = task_store.get_history(t["task_id"])
+                    with st.expander(f"Activity History ({len(history)})", expanded=False):
+                        for h in history:
+                            st.markdown(
+                                f"- **{h['timestamp'][:16]}** | `{h['update_type']}` | "
+                                f"`{h['old_value']}` ➔ `{h['new_value']}`"
+                            )
 
-                # Expandable Change History
-                history = task_store.get_history(t["task_id"])
-                with st.expander(f"Change History ({len(history)} entries)", expanded=False):
-                    for h in history:
-                        st.markdown(
-                            f"- **{h['timestamp'][:19]}** | Update: `{h['update_type']}` | "
-                            f"Old: `{h['old_value']}` ➔ New: `{h['new_value']}` | "
-                            f"Evidence: *\"{h['evidence_text']}\"*"
-                        )
-                        if h.get("followup_text"):
-                            st.caption(f"Context: {h['followup_text'][:120]}")
-
-                # Manual Status Update with Evidence & Confirmation
-                with st.expander("Update Task Status (Requires User Confirmation & Evidence)", expanded=False):
-                    st.caption("Constraint: Do not mark an action completed or cancelled without supporting evidence and user confirmation.")
-                    col_m1, col_m2 = st.columns([2, 1])
+                # Quick Status Update
+                with st.expander("Update Task Status", expanded=False):
+                    col_m1, col_m2, col_m3 = st.columns([2, 1, 1])
                     with col_m1:
                         manual_ev = st.text_input(
-                            "Supporting Evidence / Note:",
+                            "Status Note / Reason:",
                             key=f"manual_ev_{t['task_id']}",
-                            placeholder="e.g., Confirmed receipt via call or document delivered.",
+                            placeholder="e.g., Deliverable completed and verified.",
                         )
                     with col_m2:
                         new_stat = st.selectbox(
-                            "New Status:",
+                            "Set Status:",
                             ["completed", "cancelled"],
                             key=f"manual_stat_{t['task_id']}",
                         )
-                    confirm_stat_btn = st.button(
-                        f"Confirm Status Change for {t['task_id']}",
-                        key=f"btn_stat_{t['task_id']}",
-                        type="secondary",
-                    )
+                    with col_m3:
+                        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+                        confirm_stat_btn = st.button(
+                            "Update Status",
+                            key=f"btn_stat_{t['task_id']}",
+                            type="secondary",
+                        )
                     if confirm_stat_btn:
-                        if not manual_ev.strip():
-                            st.error("Supporting evidence is strictly required before changing status.")
-                        else:
-                            ok = task_store.apply_update(
-                                t["task_id"],
-                                new_stat,
-                                new_stat,
-                                manual_ev.strip(),
-                                f"Manual user confirmation: {manual_ev.strip()}",
-                            )
-                            if ok:
-                                st.success(f"Status updated to '{new_stat}' for task {t['task_id']}.")
-                                st.rerun()
+                        note = manual_ev.strip() or f"User marked as {new_stat}"
+                        ok = task_store.apply_update(
+                            t["task_id"],
+                            new_stat,
+                            new_stat,
+                            note,
+                            f"Status update: {note}",
+                        )
+                        if ok:
+                            st.success(f"Status updated to '{new_stat}'!")
+                            st.rerun()
 
 
 # -------------------------------------------------------------
 # TAB 3: Follow-up
 # -------------------------------------------------------------
 with tab3:
-    st.subheader("Link Follow-up & Review Changes")
-    st.markdown(
-        "Compare a pasted follow-up message with saved tasks using **pretrained semantic similarity** "
-        "(`sentence-transformers/all-MiniLM-L6-v2`). Conservatively detect proposed updates with transparent rules and exact evidence."
-    )
+    st.subheader("Follow-up & State Tracker")
+    st.caption("Link replies and follow-ups to existing tasks to automatically update deadlines and track status.")
 
     all_tasks = task_store.list_tasks()
     if not all_tasks:
-        st.warning("No saved tasks found. Please create and confirm a task in Tab 1 before linking follow-ups.")
+        st.warning("No tasks saved yet. Save a task in Tab 1 before tracking follow-ups.")
     else:
         followup_presets = {
             "Follow-up 1 (DevOps Incident): Elena Completed Redis Saturation Investigation": "Elena has finished investigating the Redis connection pool saturation; connection limits have been stabilized.",
@@ -519,7 +500,7 @@ with tab3:
         }
 
         selected_f_preset = st.selectbox(
-            "Choose a sample follow-up scenario or write your own:",
+            "Select Follow-up Scenario or Write Custom:",
             list(followup_presets.keys()),
             index=0,
             key="followup_preset_select",
@@ -527,13 +508,14 @@ with tab3:
         initial_f_text = followup_presets[selected_f_preset]
 
         followup_input = st.text_area(
-            "Paste Follow-up Message:",
+            "Follow-up Message Text:",
             value=initial_f_text,
             height=100,
             key=f"followup_input_{selected_f_preset[:8]}",
+            placeholder="Paste email reply, status message, or update...",
         )
 
-        link_btn = st.button("Analyze Follow-up & Rank Matches", type="primary")
+        link_btn = st.button("Scan for Updates & Link", type="primary")
 
         if link_btn or "last_followup_analysis" in st.session_state:
             if link_btn:
@@ -554,86 +536,73 @@ with tab3:
 
             f_analysis = st.session_state["last_followup_analysis"]
 
-            st.markdown("### Top Candidate Task Matches")
-            st.info(
-                "**Important**: Similarity score indicates semantic proximity, but similarity is **not proof of a relationship**. "
-                "User confirmation is strictly required to link a follow-up. "
-                "A related commitment is not classified as unrelated merely because it changes no deadline or owner."
-            )
-
+            st.markdown("### Matching Tasks")
             ranked = f_analysis["ranked"]
             task_options = [r["task"]["task_id"] for r in ranked]
 
             for rank_idx, r in enumerate(ranked):
                 cand_task = r["task"]
+                match_pct = int(min(max(r["similarity_score"], 0.0), 1.0) * 100)
                 with st.container(border=True):
                     sc_col1, sc_col2 = st.columns([3, 1])
                     with sc_col1:
-                        st.markdown(f"**Rank #{rank_idx+1} — Task ID:** `{cand_task['task_id']}`")
-                        st.markdown(f"**Description:** {cand_task['action_description']}")
-                        st.markdown(f"**Current Owner:** `{cand_task['owner']}` | **Current Deadline:** `{cand_task['deadline']}` | **Status:** `{cand_task['status']}`")
+                        st.markdown(f"**{cand_task['action_description']}**")
+                        st.caption(f"Assignee: `{cand_task['owner']}` | Due Date: `{cand_task['deadline']}` | Status: `{cand_task['status'].upper()}`")
                     with sc_col2:
-                        st.metric("Similarity Score", f"{r['similarity_score']:.4f}")
+                        st.metric("Match Confidence", f"{match_pct}%")
 
-            # User confirmation of match
-            st.markdown("---")
-            st.subheader("Select Matching Task & Review Proposed Updates")
+            # Update Proposal
+            st.divider()
+            st.markdown("### Review & Apply Updates")
 
             selected_task_id = st.selectbox(
-                "Choose Confirmed Matching Task:",
+                "Confirm Matching Task:",
                 task_options,
+                format_func=lambda tid: f"{tid} — {next((r['task']['action_description'] for r in ranked if r['task']['task_id'] == tid), tid)}",
                 key="select_confirmed_match",
             )
 
             selected_task = task_store.get_task(selected_task_id) if selected_task_id else None
 
             if selected_task:
-                st.markdown(f"Selected: `{selected_task['task_id']}` — *{selected_task['action_description']}*")
-
                 updates = f_analysis["updates"]
                 if not updates:
-                    st.info(
-                        "No explicit deadline revision, owner change, cancellation, or completion detected in text. "
-                        "(Note: Courtesies like 'Thanks' are excluded from completion detection.) "
-                        "You may still link this follow-up as a related commitment/note."
-                    )
-                    confirm_link_note_btn = st.button("Confirm & Link Follow-up Note", type="secondary")
+                    st.info("No explicit deadline revisions or status changes detected in this text. You can still link it as a progress note.")
+                    confirm_link_note_btn = st.button("Link as Progress Note", type="secondary")
                     if confirm_link_note_btn:
                         ok = task_store.apply_update(
                             selected_task["task_id"],
                             "followup_linked",
-                            "Linked Follow-up Note",
+                            "Linked Progress Note",
                             f_analysis["followup_text"][:60],
                             f_analysis["followup_text"],
                         )
                         if ok:
-                            st.success(f"Follow-up successfully linked to task `{selected_task['task_id']}` in history.")
+                            st.success(f"Progress note linked to task `{selected_task['task_id']}`!")
                             st.rerun()
                 else:
-                    st.markdown("#### Conservatively Detected Proposed Updates")
-                    st.caption("Review exact evidence. Confirmation is required before modifying task state.")
-
+                    st.markdown("#### Detected Changes")
                     for u_idx, u in enumerate(updates):
                         with st.container(border=True):
                             u_col1, u_col2 = st.columns([3, 1])
                             with u_col1:
-                                st.markdown(f"**Update Type:** `{u['update_type']}`")
-                                st.markdown(f"**Proposed Change:** {u['description']}")
-                                st.markdown(f"**Exact Source Evidence:** `{u['evidence_text']}`")
                                 if u["update_type"] == "deadline_revised":
                                     proposed_target = u.get("new_value_normalized", u["new_value"])
-                                    st.markdown(f"Previous Deadline: `{selected_task['deadline']}` ➔ Grounded Target: `{proposed_target}` *(from \"{u['new_value']}\")*")
+                                    st.markdown(f"**Proposed Due Date:** `{proposed_target}` *(from \"{u['new_value']}\")*")
+                                    st.caption(f"Current Due Date: `{selected_task['deadline']}`")
                                 elif u["update_type"] == "owner_revised":
-                                    st.markdown(f"Previous Owner: `{selected_task['owner']}` ➔ Proposed: `{u['new_value']}`")
+                                    st.markdown(f"**Proposed Reassignment:** `{u['new_value']}`")
+                                    st.caption(f"Current Assignee: `{selected_task['owner']}`")
                                 elif u["update_type"] in ("completed", "cancelled"):
-                                    st.markdown(f"Previous Status: `{selected_task['status']}` ➔ Proposed: `{u['new_value']}`")
+                                    st.markdown(f"**Proposed Status:** `{u['new_value'].upper()}`")
+
+                                st.markdown(f"**Source Evidence:** *\"{u['evidence_text']}\"*")
 
                             with u_col2:
                                 apply_btn = st.button(
-                                    f"Confirm & Apply Update",
+                                    "Apply Update",
                                     key=f"btn_apply_up_{u_idx}",
                                     type="primary",
-                                    help="Appends an immutable state transition record to SQLite.",
                                 )
                                 if apply_btn:
                                     commit_val = u.get("new_value_normalized", u["new_value"]) if u["update_type"] == "deadline_revised" else u["new_value"]
@@ -645,5 +614,5 @@ with tab3:
                                         f_analysis["followup_text"],
                                     )
                                     if ok:
-                                        st.success(f"Update `{u['update_type']}` successfully applied to task `{selected_task['task_id']}`!")
+                                        st.success(f"Update applied to task `{selected_task['task_id']}`!")
                                         st.rerun()
