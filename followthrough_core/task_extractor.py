@@ -185,6 +185,7 @@ def extract_candidate_tasks(
         is_commitment_lead = bool(re.search(r"^(?:i|we)\s+(?:will|shall|can|promise|plan to|’ll|'ll|need to|must|should)\b", after_name_sentence, re.I))
         is_request_lead = bool(re.search(r"^(?:please|kindly|could you|can you|would you mind|let\'s|you should|make sure to|be sure to)\b", after_name_sentence, re.I))
         has_action_verb = bool(re.search(r"\b" + ACTION_VERBS + r"\b", after_name_sentence, re.I))
+        starts_with_action_verb = bool(re.search(r"^(?:" + ACTION_VERBS + r")\b", after_name_sentence, re.I))
 
         is_action = False
         task_type = "Request"
@@ -192,7 +193,7 @@ def extract_candidate_tasks(
         if is_commitment_lead and has_action_verb:
             is_action = True
             task_type = "Commitment"
-        elif is_request_lead and (has_action_verb or len(after_name_sentence.split()) >= 4):
+        elif (is_request_lead or starts_with_action_verb) and (has_action_verb or len(after_name_sentence.split()) >= 4):
             is_action = True
             task_type = "Request"
         elif addressed_name and (is_request_lead or bool(re.search(r"^(?:can|could|please|update|review|prepare|schedule|submit|coordinate|check|fix|deploy|test|investigate)\b", after_name_sentence, re.I))):
