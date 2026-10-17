@@ -131,15 +131,44 @@ with tab1:
         "extract candidate actions with exact source evidence, and save verified tasks."
     )
 
-    sample_email = """Hi Shirley,
+    sample_options = {
+        "Sample 1: Quarterly Budget (Request + Commitment + Deadline)": (
+            "Hi Shirley,\n\n"
+            "Please prepare the finalized quarterly budget report by Thursday afternoon.\n"
+            "I will follow up with accounting tomorrow to get the updated ledger numbers.\n\n"
+            "Thanks,\nPhillip"
+        ),
+        "Sample 2: Email with Forwarded Chain (Demonstrating Clean Task Extraction)": (
+            "Vince,\n\n"
+            "Please review this draft contract agreement by tomorrow 5 PM.\n"
+            "I will follow up with legal to verify the indemnity terms.\n\n"
+            "---------------------- Forwarded by Vince J Kaminski/HOU/ECT on 05/07/2001 12:28 PM ---------------------------\n"
+            "From: contractor-relations@enron.com\n"
+            "Sent: Friday, May 04, 2001 5:26 PM\n"
+            "Subject: Old 1999 boilerplate terms...\n"
+        ),
+        "Sample 3: IT Engineering Task (Assignee + Strict Deadline)": (
+            "Alex,\n\n"
+            "Could you verify the server deployment logs before Friday?\n"
+            "We need to submit the security compliance report to the auditors.\n\n"
+            "Best regards,\nSarah"
+        ),
+        "Custom Message (Type / Paste Your Own)": "",
+    }
 
-Please prepare the finalized quarterly budget report by Thursday afternoon.
-I will follow up with accounting tomorrow to get the updated ledger numbers.
+    selected_sample = st.selectbox(
+        "Choose a sample scenario or enter your own:",
+        list(sample_options.keys()),
+        index=0,
+    )
+    initial_text = sample_options[selected_sample]
 
-Thanks,
-Phillip"""
-
-    message_input = st.text_area("Paste Email / Message:", value=sample_email, height=140, key="msg_input")
+    message_input = st.text_area(
+        "Paste Email / Message:",
+        value=initial_text,
+        height=140,
+        key=f"msg_input_{selected_sample[:8]}",
+    )
     analyze_btn = st.button("Analyze Message", type="primary")
 
     if analyze_btn or "last_msg_analysis" in st.session_state:
@@ -440,8 +469,27 @@ with tab3:
     if not all_tasks:
         st.warning("No saved tasks found. Please create and confirm a task in Tab 1 before linking follow-ups.")
     else:
-        default_followup = "We have postponed the quarterly risk report to next Monday. Mike will review."
-        followup_input = st.text_area("Paste Follow-up Message:", value=default_followup, height=100, key="followup_input")
+        followup_presets = {
+            "Follow-up 1: Deadline Extension & Reassignment": "We have postponed the quarterly budget report to next Monday. Mike will review.",
+            "Follow-up 2: Task Completion": "I have finished preparing the finalized quarterly report and submitted it to the team.",
+            "Follow-up 3: Reassignment": "Shirley is out of the office, so David will prepare the report instead.",
+            "Custom Follow-up (Type / Paste Your Own)": "",
+        }
+
+        selected_f_preset = st.selectbox(
+            "Choose a sample follow-up scenario or write your own:",
+            list(followup_presets.keys()),
+            index=0,
+            key="followup_preset_select",
+        )
+        initial_f_text = followup_presets[selected_f_preset]
+
+        followup_input = st.text_area(
+            "Paste Follow-up Message:",
+            value=initial_f_text,
+            height=100,
+            key=f"followup_input_{selected_f_preset[:8]}",
+        )
 
         link_btn = st.button("Analyze Follow-up & Rank Matches", type="primary")
 
