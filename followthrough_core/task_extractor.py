@@ -51,12 +51,41 @@ def find_quoted_boundary(text: str) -> int:
     return min_pos
 
 
+def clean_action_title(sentence: str) -> str:
+    """Extract a concise imperative action title from a full sentence.
+    
+    Strips conversational preambles (e.g., 'Please', 'Could you', 'I will').
+    """
+    text = sentence.strip().rstrip(".!?")
+    text = re.sub(r"^[A-Z][a-z]+,\s*", "", text).strip()
+    prefixes = [
+        r"^(?:please\s*,?\s*)",
+        r"^(?:could\s+you\s+(?:please\s*)?)",
+        r"^(?:can\s+you\s+(?:please\s*)?)",
+        r"^(?:would\s+you\s+mind\s+)",
+        r"^(?:let\'s\s+)",
+        r"^(?:i\s+will\s+)",
+        r"^(?:we\s+will\s+|we\s+shall\s+)",
+        r"^(?:i\'ll\s+)",
+        r"^(?:i\s+can\s+)",
+        r"^(?:you\s+should\s+)",
+        r"^(?:make\s+sure\s+to\s+)",
+        r"^(?:be\s+sure\s+to\s+)",
+    ]
+    for p in prefixes:
+        text = re.sub(p, "", text, flags=re.I).strip()
+    if text:
+        text = text[0].upper() + text[1:]
+    return text
+
+
 def extract_candidate_tasks(text: str) -> List[Dict[str, Any]]:
     """Extract candidate task/event objects with exact evidence and offsets.
 
     Processes the full input text independently of classifier token limits.
     Produces:
-    - action_description: Full cleaned sentence containing the task directive
+    - action_description: Concise imperative action phrase
+    - task_type: 'Request' (delegated) or 'Commitment' (self-assigned promise)
     - owner: Explicit assignee or speaker pronoun ('Unspecified' if missing)
     - deadline: Literal date/deadline expression ('None specified' if missing)
     - evidence_text: Exact source substring
@@ -65,6 +94,13 @@ def extract_candidate_tasks(text: str) -> List[Dict[str, Any]]:
     """
     quoted_start = find_quoted_boundary(text)
     candidates: List[Dict[str, Any]] = []
+
+    # Detect global greeting recipient and signoff sender for context-aware owner resolution
+    m_rec = re.search(r"(?im)^\s*(?:hi|hello|dear|hey)?\s*([A-Z][a-z]+)\s*[,:]\s*$", text)
+    greeting_recipient = m_rec.group(1) if m_rec else None
+
+    m_send = re.search(r"(?im)^\s*(?:thanks|thank you|regards|best regards|sincerely),?\s*\n\s*([A-Z][a-z]+)\s*$", text)
+    signoff_sender = m_send.group(1) if m_send else None
 
     # Iterate over sentences while preserving exact character offsets
     sentence_regex = re.compile(r"([^\n.!?]+(?:[\n.!?]+|$))")
@@ -105,7 +141,10 @@ def extract_candidate_tasks(text: str) -> List[Dict[str, Any]]:
         if not is_action:
             continue
 
-        # 2. Explicit Owner Extraction
+        # 2. Task Type & Explicit Owner Extraction
+        is_commitment = bool(re.match(r"^(?:i|we)\s+(?:will|shall|can|promise|plan to|’ll|'ll)\b", clean_sentence, re.I))
+        task_type = "Commitment" if is_commitment else "Request"
+
         owner: Optional[str] = None
         for np in NAME_TARGET_PATTERNS:
             m_name = np.search(clean_sentence)
@@ -113,11 +152,16 @@ def extract_candidate_tasks(text: str) -> List[Dict[str, Any]]:
                 owner = m_name.group(1)
                 break
         if not owner:
-            # Detect first-person commitment pronouns
-            if re.match(r"^i\s+(?:will|shall|can|promise)", clean_sentence, re.I):
-                owner = "Sender (I)"
-            elif re.match(r"^we\s+(?:will|shall|can)", clean_sentence, re.I):
-                owner = "Sender Group (We)"
+            if is_commitment:
+                # First-person commitment assigned to sender
+                if signoff_sender:
+                    owner = f"Sender ({signoff_sender})"
+                else:
+                    owner = "Sender (I)" if re.match(r"^i\b", clean_sentence, re.I) else "Sender Group (We)"
+            else:
+                # Direct request defaults to greeting recipient if present
+                if greeting_recipient:
+                    owner = greeting_recipient
 
         # 3. Literal Deadline Extraction
         deadline: Optional[str] = None
@@ -136,8 +180,13 @@ def extract_candidate_tasks(text: str) -> List[Dict[str, Any]]:
         if actual_start >= quoted_start:
             flags.append("quoted_or_forwarded_text")
 
+        action_title = clean_action_title(clean_sentence)
+
         candidates.append({
-            "action_description": clean_sentence,
+            "task_title": action_title,
+            "action_description": action_title,
+            "raw_sentence": clean_sentence,
+            "task_type": task_type,
             "owner": owner or "Unspecified",
             "deadline": deadline or "None specified",
             "evidence_text": evidence_substring,

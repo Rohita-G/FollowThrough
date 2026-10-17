@@ -317,10 +317,13 @@ with tab1:
             st.caption("Review and edit suggested task fields before saving. Missing fields are never invented.")
             for idx, cand in enumerate(candidates):
                 with st.container(border=True):
-                    st.markdown(f"**Suggested Task #{idx+1}**")
+                    task_type = cand.get("task_type", "Action Directive")
+                    type_label = "Request (Delegated to Recipient)" if task_type == "Request" else "Commitment (Author's Promise)"
+                    st.markdown(f"#### Task #{idx+1}: {cand['action_description']}")
+                    st.caption(f"**Type:** `{type_label}` | **Assignee:** `{cand['owner']}` | **Deadline:** `{cand['deadline']}`")
                     st.markdown(
-                        f"**Source Evidence:** `{cand['evidence_text']}` "
-                        f"(Offsets: `[{cand['start_offset']}:{cand['end_offset']}]`)"
+                        f"**Source Evidence:** *\"{cand['evidence_text']}\"* "
+                        f"(Exact Character Offsets: `[{cand['start_offset']}:{cand['end_offset']}]`)"
                     )
                     flags = cand.get("uncertainty_flags", [])
                     if flags:
