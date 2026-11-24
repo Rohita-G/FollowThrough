@@ -1,5 +1,11 @@
 # FollowThrough-Final
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://followthrough-final-nlp-project.streamlit.app/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+
+**Live Deployed Application:** [https://followthrough-final-nlp-project.streamlit.app/](https://followthrough-final-nlp-project.streamlit.app/)
+
 FollowThrough is an evidence-backed conversational task extraction and state-tracking natural language processing (NLP) application. It transforms unstructured emails and workplace messages into verifiable, evidence-backed action items, connects subsequent follow-up messages using dense bi-encoder semantic similarity (`all-MiniLM-L6-v2`), and maintains an immutable audit ledger of user-confirmed state changes in SQLite.
 
 ---
@@ -8,6 +14,8 @@ FollowThrough is an evidence-backed conversational task extraction and state-tra
 - **Team Members:** Rohita Gangishetty
 - **Course:** Natural Language Processing Capstone Project
 - **Term:** Fall 2026
+- **Live Demo:** [https://followthrough-final-nlp-project.streamlit.app/](https://followthrough-final-nlp-project.streamlit.app/)
+- **Repository:** [https://github.com/Rohita-G/FollowThrough](https://github.com/Rohita-G/FollowThrough)
 
 ---
 
