@@ -6,10 +6,8 @@ import shutil
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DOCS_DIR = REPO_ROOT / "docs"
-HTML_OUT = DOCS_DIR / "project_report.html"
-PDF_OUT = DOCS_DIR / "project_report.pdf"
-PDF_ALT = DOCS_DIR / "FollowThrough_Research_Paper.pdf"
+HTML_OUT = Path("/tmp/project_report.html")
+PDF_OUT = REPO_ROOT / "project_report.pdf"
 
 IEEE_HTML = """<!DOCTYPE html>
 <html lang="en">
@@ -1016,8 +1014,6 @@ def generate():
     if PDF_OUT.exists():
         size_kb = PDF_OUT.stat().st_size / 1024
         print(f"SUCCESS: IEEE PDF generated at {PDF_OUT} ({size_kb:.1f} KB)")
-        shutil.copyfile(PDF_OUT, PDF_ALT)
-        print(f"SUCCESS: Copied to {PDF_ALT}")
     else:
         print(f"ERROR: PDF generation failed. Stderr:\n{res.stderr}")
 

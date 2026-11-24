@@ -183,19 +183,11 @@ FollowThrough-Final/
 │   ├── test_classifier.py         # Classifier wrapper unit tests
 │   └── test_temporal_normalizer.py# Relative deadline normalization unit tests
 ├── evaluation/
-│   ├── README.md                  # Evaluation guidelines and dataset notes
 │   └── results/                   # Final evaluation result artifacts & comparison
 ├── data/
-│   ├── README.md                  # Enron corpus acquisition & preprocessing guide
 │   └── annotations/               # Stratified test review sheets for human audit
-├── models/
-│   └── README.md                  # Model architectures, training, and loading guide
-├── docs/
-│   ├── figures/                   # High-resolution system architecture diagrams
-│   │   └── system_architecture.png# End-to-end architecture & workflow diagram
-│   ├── project_report.pdf         # Compiled IEEE conference research paper (PDF)
-│   ├── project_report.tex         # Complete IEEEtran LaTeX source code for Overleaf
-│   └── project_report.md          # Multi-section markdown project documentation
+├── models/                        # Serialized model checkpoints (git-ignored)
+├── project_report.pdf             # Official IEEE conference research paper
 ├── requirements.txt               # Python package dependencies
 ├── .gitignore                     # Git exclusion rules
 └── README.md                      # Project overview & documentation
