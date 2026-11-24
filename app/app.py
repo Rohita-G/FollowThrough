@@ -28,6 +28,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from followthrough_core.task_extractor import extract_candidate_tasks
+from followthrough_core.long_message_classifier import classify_long_message
 from followthrough_core.task_store import TaskStore
 from followthrough_core.followup_linker import FollowupLinker
 from followthrough_core.calendar_sync import (
