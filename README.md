@@ -167,9 +167,12 @@ FollowThrough-Final/
 │   ├── prepare_data.py            # Unified data preparation (--full and --smoke)
 │   ├── train_full_tfidf.py        # TF-IDF baseline training & threshold optimization
 │   ├── train_full_distilbert.py   # DistilBERT fine-tuning script with checkpoints
+│   ├── train_weighted_distilbert.py # Class-weighted training & oversampling experiments
+│   ├── tune_thresholds_experiment.py # Threshold sweeping on validation PR curves
 │   ├── evaluate_models.py         # Comparative classification model evaluation
 │   ├── evaluate_extraction_linking.py # Extraction and linking evaluation on review sheet
 │   ├── generate_final_results.py  # Generates canonical artifacts in evaluation/results/
+│   ├── generate_paper_pdf.py      # Automated IEEE report PDF compilation
 │   └── build_full_corpus_manifest.py # Full corpus manifest & disjoint split builder
 ├── app/                           # Streamlit user interface
 │   └── app.py                     # Interactive 3-tab application
@@ -188,9 +191,11 @@ FollowThrough-Final/
 ├── models/
 │   └── README.md                  # Model architectures, training, and loading guide
 ├── docs/
-│   ├── architecture.md            # System architecture and Mermaid diagrams
-│   ├── data_provenance.md         # Full data lineage specification & Mermaid diagram
-│   └── project_report.md          # Multi-section IEEE format project report
+│   ├── figures/                   # High-resolution system architecture diagrams
+│   │   └── system_architecture.png# End-to-end architecture & workflow diagram
+│   ├── project_report.pdf         # Compiled IEEE conference research paper (PDF)
+│   ├── project_report.tex         # Complete IEEEtran LaTeX source code for Overleaf
+│   └── project_report.md          # Multi-section markdown project documentation
 ├── requirements.txt               # Python package dependencies
 ├── .gitignore                     # Git exclusion rules
 └── README.md                      # Project overview & documentation
