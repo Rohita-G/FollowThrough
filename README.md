@@ -5,7 +5,7 @@ FollowThrough is an evidence-backed conversational task extraction and state-tra
 ---
 
 ## Team Information
-- **Team Members:** [Student Name(s) / Team Information Placeholder]
+- **Team Members:** Rohita Gangishetty
 - **Course:** Natural Language Processing Capstone Project
 - **Term:** Fall 2026
 

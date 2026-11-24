@@ -12,7 +12,8 @@ from pathlib import Path
 import sqlite3
 from typing import Any, Dict, List, Optional, Tuple
 
-DEFAULT_DB_PATH = Path("data/followthrough_tasks.db")
+REPO_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_DB_PATH = REPO_ROOT / "data" / "followthrough_tasks.db"
 
 
 class TaskStore:
@@ -246,3 +247,67 @@ class TaskStore:
             ))
             conn.commit()
             return True
+
+    def delete_task(self, task_id: str) -> bool:
+        """Permanently delete a task and its history from the ledger."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM task_history WHERE task_id = ?", (task_id,))
+            cursor.execute("DELETE FROM tasks WHERE task_id = ?", (task_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def delete_tasks(self, task_ids: List[str]) -> int:
+        """Permanently batch delete multiple tasks and their histories."""
+        if not task_ids:
+            return 0
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            placeholders = ",".join("?" for _ in task_ids)
+            cursor.execute(f"DELETE FROM task_history WHERE task_id IN ({placeholders})", task_ids)
+            cursor.execute(f"DELETE FROM tasks WHERE task_id IN ({placeholders})", task_ids)
+            conn.commit()
+            return len(task_ids)
+
+    def batch_update_status(self, task_ids: List[str], status: str) -> int:
+        """Batch update the status of multiple tasks with audit logging."""
+        if not task_ids:
+            return 0
+        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            for tid in task_ids:
+                cursor.execute("UPDATE tasks SET status = ? WHERE task_id = ?", (status, tid))
+                cursor.execute("""
+                    INSERT INTO task_history (
+                        task_id, timestamp, update_type, old_value, new_value, evidence_text, followup_text
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (tid, now_iso, status, "batch_update", status, "Batch status change", "User applied batch action"))
+            conn.commit()
+            return len(task_ids)
+
+    def clear_completed_and_cancelled(self) -> int:
+        """Prune all completed and cancelled tasks to prevent ledger clutter."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT task_id FROM tasks WHERE LOWER(status) IN ('completed', 'cancelled', 'dismissed', 'done')")
+            ids = [r["task_id"] for r in cursor.fetchall()]
+            if not ids:
+                return 0
+            placeholders = ",".join("?" for _ in ids)
+            cursor.execute(f"DELETE FROM task_history WHERE task_id IN ({placeholders})", ids)
+            cursor.execute(f"DELETE FROM tasks WHERE task_id IN ({placeholders})", ids)
+            conn.commit()
+            return len(ids)
+
+    def clear_all_tasks(self) -> int:
+        """Clear all tasks and history from the ledger for a clean reset."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) as cnt FROM tasks")
+            cnt = cursor.fetchone()["cnt"]
+            cursor.execute("DELETE FROM task_history")
+            cursor.execute("DELETE FROM tasks")
+            conn.commit()
+            return cnt
+

@@ -32,7 +32,6 @@ from followthrough_core.task_store import TaskStore
 from followthrough_core.followup_linker import FollowupLinker
 from followthrough_core.calendar_sync import (
     generate_google_calendar_url,
-    generate_ics_content,
     parse_deadline_to_datetimes,
 )
 
@@ -48,9 +47,26 @@ DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if 
 MAX_LENGTH = 128
 
 
-@st.cache_resource
 def get_task_store() -> TaskStore:
     return TaskStore()
+
+
+def safe_delete_tasks(store: TaskStore, task_ids: List[str]) -> int:
+    if hasattr(store, "delete_tasks"):
+        return store.delete_tasks(task_ids)
+    count = 0
+    for tid in task_ids:
+        if store.delete_task(tid):
+            count += 1
+    return count
+
+
+def safe_batch_update_status(store: TaskStore, task_ids: List[str], status: str) -> int:
+    if hasattr(store, "batch_update_status"):
+        return store.batch_update_status(task_ids, status)
+    for tid in task_ids:
+        store.apply_update(tid, status, status, f"Batch {status}", "User batch action")
+    return len(task_ids)
 
 
 @st.cache_resource
@@ -103,12 +119,12 @@ html, body, [class*="css"] {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 .app-brand-title {
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 800;
-    color: #1E1B4B;
+    color: #0F172A;
     letter-spacing: -0.5px;
 }
 .app-brand-tag {
@@ -116,7 +132,7 @@ html, body, [class*="css"] {
     color: #4F46E5;
     font-size: 11px;
     font-weight: 700;
-    padding: 3px 8px;
+    padding: 2px 8px;
     border-radius: 6px;
     border: 1px solid #C7D2FE;
     text-transform: uppercase;
@@ -128,71 +144,54 @@ button[kind="primary"] {
     background: #4F46E5 !important;
     color: white !important;
     border: none !important;
-    border-radius: 8px !important;
-    font-weight: 700 !important;
-    padding: 8px 20px !important;
-    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25) !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    padding: 6px 16px !important;
+    box-shadow: 0 1px 3px rgba(79, 70, 229, 0.2) !important;
     transition: all 0.15s ease !important;
 }
 button[kind="primary"]:hover {
     background: #4338CA !important;
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35) !important;
+    box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3) !important;
 }
 
 /* Secondary Button Styling */
 button[kind="secondary"] {
     background: #FFFFFF !important;
     color: #334155 !important;
-    border: 1px solid #CBD5E1 !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 6px !important;
+    font-weight: 500 !important;
+    font-size: 13px !important;
+    padding: 6px 14px !important;
     transition: all 0.15s ease !important;
 }
 button[kind="secondary"]:hover {
     background: #F8FAFC !important;
-    border-color: #94A3B8 !important;
+    border-color: #CBD5E1 !important;
+    color: #0F172A !important;
 }
 
 /* Calendar Card Container */
 .cal-card-request {
-    border-left: 5px solid #4F46E5 !important;
+    border-left: 4px solid #4F46E5 !important;
     background: #FFFFFF;
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 14px;
-    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05), 0 0 1px rgba(15, 23, 42, 0.1);
+    border-radius: 8px;
+    border: 1px solid #E2E8F0;
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 
 .cal-card-commitment {
-    border-left: 5px solid #059669 !important;
+    border-left: 4px solid #059669 !important;
     background: #FFFFFF;
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 14px;
-    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05), 0 0 1px rgba(15, 23, 42, 0.1);
-}
-
-/* Metric Banners */
-.metric-box-indigo {
-    background: #EEF2FF;
-    border: 1px solid #C7D2FE;
-    border-radius: 10px;
-    padding: 12px;
-    text-align: center;
-}
-.metric-box-amber {
-    background: #FEF3C7;
-    border: 1px solid #FCD34D;
-    border-radius: 10px;
-    padding: 12px;
-    text-align: center;
-}
-.metric-box-emerald {
-    background: #ECFDF5;
-    border: 1px solid #A7F3D0;
-    border-radius: 10px;
-    padding: 12px;
-    text-align: center;
+    border-radius: 8px;
+    border: 1px solid #E2E8F0;
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 </style>
 """, unsafe_allow_html=True)
@@ -268,34 +267,29 @@ followup_linker = get_followup_linker()
 # Sidebar: Workspace Overview & Collapsible AI Inspector
 with st.sidebar:
     st.markdown("""
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
-        <div style="background:#4F46E5; color:white; font-size:13px; font-weight:800; border-radius:6px; width:28px; height:28px; display:flex; align-items:center; justify-content:center;">FT</div>
-        <span style="font-size:18px; font-weight:800; color:#1E1B4B;">FollowThrough</span>
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+        <div style="background:#4F46E5; color:white; font-size:12px; font-weight:800; border-radius:6px; width:26px; height:26px; display:flex; align-items:center; justify-content:center;">FT</div>
+        <span style="font-size:17px; font-weight:800; color:#0F172A; letter-spacing:-0.3px;">FollowThrough</span>
     </div>
-    <div style="font-size:12px; color:#64748B; margin-bottom:16px;">Task Intelligence & Ledger</div>
+    <div style="font-size:11px; color:#64748B; margin-bottom:14px;">Task Intelligence Ledger</div>
     """, unsafe_allow_html=True)
 
     all_tasks = task_store.list_tasks()
-    pending_count = sum(1 for t in all_tasks if t.get("status") == "pending")
-    completed_count = sum(1 for t in all_tasks if t.get("status") == "completed")
+    active_count = sum(1 for t in all_tasks if t.get("status") not in ("cancelled", "dismissed"))
+    dismissed_count = sum(1 for t in all_tasks if t.get("status") in ("cancelled", "dismissed"))
 
-    stat_col1, stat_col2 = st.columns(2)
-    with stat_col1:
-        st.markdown(f"""
-        <div class="metric-box-amber">
-            <div style="font-size:10px; font-weight:700; color:#92400E; text-transform:uppercase;">Pending</div>
-            <div style="font-size:22px; font-weight:800; color:#78350F;">{pending_count}</div>
+    st.markdown(f"""
+    <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:10px 14px; margin-bottom:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:11px; font-weight:600; color:#475569; text-transform:uppercase; letter-spacing:0.5px;">Active Tasks</span>
+            <span style="font-size:16px; font-weight:800; color:#4F46E5;">{active_count}</span>
         </div>
-        """, unsafe_allow_html=True)
-    with stat_col2:
-        st.markdown(f"""
-        <div class="metric-box-emerald">
-            <div style="font-size:10px; font-weight:700; color:#065F46; text-transform:uppercase;">Completed</div>
-            <div style="font-size:22px; font-weight:800; color:#064E3B;">{completed_count}</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #F1F5F9; padding-top:6px;">
+            <span style="font-size:11px; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px;">Dismissed</span>
+            <span style="font-size:14px; font-weight:700; color:#94A3B8;">{dismissed_count}</span>
         </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
 
     # Collapsible AI Engine Drawer for technical inspection
     with st.expander("AI Engine & Model Settings", expanded=False):
@@ -345,6 +339,22 @@ with tab1:
     st.caption("Select a workplace scenario or paste your own message thread below.")
 
     sample_scenarios = {
+        "Slack / Teams Standup (@Mentions & Dev Directives)": {
+            "title": "Engineering Sprint & PR Review",
+            "body": (
+                "@kevin: can you review the pull request #402 before 3 PM today?\n"
+                "@sarah please verify the staging endpoints by EOD.\n"
+                "alex: I will deploy the hotfix patch to staging by tonight.\n"
+                "dan: let's jump on an architecture sync tomorrow at 11am."
+            ),
+        },
+        "Mobile SMS / Urgent On-Call Ping": {
+            "title": "Mobile Ops Alert",
+            "body": (
+                "Hey Alex, production traffic is spiking. Plz push the hotfix build before 5 PM today. "
+                "I will notify customer support once it is live."
+            ),
+        },
         "Cross-Functional Team Email (Multiple Owners & Deadlines)": {
             "title": "Acme Corp Pilot & Security Architecture",
             "body": (
@@ -593,74 +603,64 @@ with tab1:
                 </div>
                 """, unsafe_allow_html=True)
 
-                # Editable Fields & Confirmation Button
-                with st.expander(f"Configure Task #{idx+1}", expanded=True):
+                with st.expander(f"Edit Fields #{idx+1}", expanded=False):
                     col_edit1, col_edit2, col_edit3 = st.columns([2, 1, 1])
                     with col_edit1:
                         edit_desc = st.text_input(
-                            f"Action Description #{idx+1}",
+                            f"Action Description",
                             value=cand["action_description"],
                             key=f"edit_desc_{idx}",
                         )
                     with col_edit2:
                         edit_owner = st.text_input(
-                            f"Assignee #{idx+1}",
+                            f"Assignee",
                             value=cand["owner"],
                             key=f"edit_owner_{idx}",
                         )
                     with col_edit3:
                         edit_deadline = st.text_input(
-                            f"Due Date #{idx+1}",
+                            f"Due Date",
                             value=dl_norm,
                             key=f"edit_deadline_{idx}",
                         )
 
-                    col_save_btn, col_gcal_btn, col_ics_btn = st.columns([1.5, 1.3, 1])
-                    temp_task = {
-                        "task_id": f"cand-{idx}",
+                col_save_btn, col_gcal_btn = st.columns([1.5, 1.5])
+                temp_task = {
+                    "task_id": f"cand-{idx}",
+                    "action_description": edit_desc.strip(),
+                    "owner": edit_owner.strip(),
+                    "deadline": edit_deadline.strip(),
+                    "evidence_text": cand["evidence_text"],
+                    "thread_title": active_thread_title,
+                }
+                with col_save_btn:
+                    save_candidate_btn = st.button(
+                        f"Add to Board",
+                        key=f"btn_save_cand_{idx}",
+                        type="primary",
+                        use_container_width=True,
+                    )
+                with col_gcal_btn:
+                    gcal_cand_url = generate_google_calendar_url(temp_task)
+                    st.link_button("Add to Calendar", url=gcal_cand_url, type="secondary", use_container_width=True)
+                st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+
+                if save_candidate_btn:
+                    task_record = {
+                        "source_text": analysis["text"],
+                        "thread_title": active_thread_title,
                         "action_description": edit_desc.strip(),
                         "owner": edit_owner.strip(),
                         "deadline": edit_deadline.strip(),
                         "evidence_text": cand["evidence_text"],
-                        "thread_title": active_thread_title,
+                        "start_offset": cand["start_offset"],
+                        "end_offset": cand["end_offset"],
                     }
-                    with col_save_btn:
-                        save_candidate_btn = st.button(
-                            f"Add Task #{idx+1} to Board",
-                            key=f"btn_save_cand_{idx}",
-                            type="primary",
-                            use_container_width=True,
-                        )
-                    with col_gcal_btn:
-                        gcal_cand_url = generate_google_calendar_url(temp_task)
-                        st.link_button("Add to Google Calendar", url=gcal_cand_url, type="secondary", use_container_width=True)
-                    with col_ics_btn:
-                        ics_cand_data = generate_ics_content(temp_task)
-                        st.download_button(
-                            label="Download .ics",
-                            data=ics_cand_data,
-                            file_name=f"task_cand_{idx+1}.ics",
-                            mime="text/calendar",
-                            key=f"ics_cand_{idx}",
-                            use_container_width=True,
-                        )
-
-                    if save_candidate_btn:
-                        task_record = {
-                            "source_text": analysis["text"],
-                            "thread_title": active_thread_title,
-                            "action_description": edit_desc.strip(),
-                            "owner": edit_owner.strip(),
-                            "deadline": edit_deadline.strip(),
-                            "evidence_text": cand["evidence_text"],
-                            "start_offset": cand["start_offset"],
-                            "end_offset": cand["end_offset"],
-                        }
-                        ok, res_msg = task_store.save_task(task_record)
-                        if ok:
-                            st.success(f"Task #{idx+1} added to board. (ID: {res_msg})")
-                        else:
-                            st.warning(f"Could not save task: {res_msg}")
+                    ok, res_msg = task_store.save_task(task_record)
+                    if ok:
+                        st.success(f"Task #{idx+1} added to board. (ID: {res_msg})")
+                    else:
+                        st.warning(f"Could not save task: {res_msg}")
 
         # Optional AI Confidence Drawer (for grading)
         with st.expander("AI Confidence & Diagnostic Scores (Instructor Mode)", expanded=False):
@@ -683,63 +683,75 @@ with tab1:
 # TAB 2: Task Board
 # -------------------------------------------------------------
 with tab2:
-    st.markdown("### Team Task Board")
-    st.caption("Active commitments and delegated tasks tracked with source email context and immutable audit history.")
-
     tasks = task_store.list_tasks()
 
     if not tasks:
-        st.info("No saved tasks yet. Extract tasks from Tab 1 to populate your board.")
+        st.info("No saved tasks in ledger. Extract tasks from Tab 1 to populate your board.")
     else:
-        p_count = sum(1 for t in tasks if t["status"] == "pending")
-        c_count = sum(1 for t in tasks if t["status"] == "completed")
-        x_count = sum(1 for t in tasks if t["status"] == "cancelled")
+        active_count = sum(1 for t in tasks if t.get("status") not in ("cancelled", "dismissed"))
+        dismissed_count = sum(1 for t in tasks if t.get("status") in ("cancelled", "dismissed"))
 
-        # Top 3 Stat Cards
-        s_c1, s_c2, s_c3 = st.columns(3)
-        with s_c1:
+        # Top Header Bar: Clean Status Summary + Manage Popover
+        hdr_col, act_col = st.columns([3.2, 0.8])
+        with hdr_col:
             st.markdown(f"""
-            <div class="metric-box-indigo">
-                <div style="font-size:11px; font-weight:700; color:#3730A3; text-transform:uppercase;">Total Tasks</div>
-                <div style="font-size:24px; font-weight:800; color:#1E1B4B;">{len(tasks)}</div>
+            <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
+                <h3 style="margin:0; font-size:18px; font-weight:800; color:#0F172A;">Task Board</h3>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="background:#EEF2FF; color:#4F46E5; border:1px solid #C7D2FE; border-radius:12px; padding:2px 10px; font-size:11px; font-weight:700;">
+                        {active_count} Active
+                    </span>
+                    <span style="background:#F1F5F9; color:#64748B; border:1px solid #E2E8F0; border-radius:12px; padding:2px 10px; font-size:11px; font-weight:700;">
+                        {dismissed_count} Dismissed
+                    </span>
+                    <span style="font-size:11px; color:#94A3B8; font-weight:600;">
+                        {len(tasks)} Total
+                    </span>
+                </div>
             </div>
             """, unsafe_allow_html=True)
-        with s_c2:
-            st.markdown(f"""
-            <div class="metric-box-amber">
-                <div style="font-size:11px; font-weight:700; color:#92400E; text-transform:uppercase;">In Progress</div>
-                <div style="font-size:24px; font-weight:800; color:#78350F;">{p_count}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        with s_c3:
-            st.markdown(f"""
-            <div class="metric-box-emerald">
-                <div style="font-size:11px; font-weight:700; color:#065F46; text-transform:uppercase;">Completed</div>
-                <div style="font-size:24px; font-weight:800; color:#064E3B;">{c_count}</div>
-            </div>
-            """, unsafe_allow_html=True)
+        with act_col:
+            with st.popover("Manage Board", use_container_width=True):
+                st.markdown("**Board Maintenance**")
+                st.caption("Perform administrative ledger cleanup actions.")
+                if st.button(f"Clear Dismissed ({dismissed_count})", disabled=(dismissed_count == 0), key="btn_clear_dismissed_pop", use_container_width=True):
+                    cleared = task_store.clear_completed_and_cancelled()
+                    st.success(f"Removed {cleared} dismissed tasks.")
+                    st.rerun()
+                st.divider()
+                st.caption("Wipe all tasks from SQLite ledger for a fresh start.")
+                confirm_wipe = st.checkbox("Confirm ledger wipe", key="chk_confirm_wipe_pop")
+                if st.button("Reset Entire Board", disabled=not confirm_wipe, key="btn_reset_board_pop", type="secondary", use_container_width=True):
+                    wiped = task_store.clear_all_tasks()
+                    st.session_state["selected_task_ids"].clear()
+                    for k in list(st.session_state.keys()):
+                        if k.startswith("sel_"):
+                            st.session_state.pop(k, None)
+                    st.success(f"Wiped {wiped} tasks.")
+                    st.rerun()
 
-        st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
-
-        # Filter, Search & Urgency Sort Controls
+        # Clean Filter Bar
         unique_owners = sorted(list(set(t.get("owner", "Unspecified") for t in tasks if t.get("owner"))))
 
-        f_col1, f_col2, f_col3, f_col4 = st.columns([1, 1, 1.3, 1.4])
+        f_col1, f_col2, f_col3, f_col4 = st.columns([1.6, 1, 1, 1.2])
         with f_col1:
-            status_filter = st.selectbox("Status:", ["All", "Pending", "Completed", "Cancelled"], index=0)
+            search_query = st.text_input("Search:", placeholder="Search title, assignee, thread...", key="board_search_input")
         with f_col2:
-            owner_filter = st.selectbox("Assignee:", ["All"] + unique_owners, index=0)
+            status_filter = st.selectbox("Status:", ["Active", "Dismissed", "All"], index=0, key="board_status_filter")
         with f_col3:
-            sort_choice = st.selectbox("Sort By:", ["Upcoming Deadline", "Date Added (Newest)", "Date Added (Oldest)"], index=0)
+            owner_filter = st.selectbox("Assignee:", ["All Assignees"] + unique_owners, index=0, key="board_owner_filter")
         with f_col4:
-            search_query = st.text_input("Search:", placeholder="Title, assignee, evidence...")
+            sort_choice = st.selectbox("Sort By:", ["Upcoming Deadline", "Newest First", "Oldest First"], index=0, key="board_sort_choice")
 
         # Apply filtering
         filtered_tasks = []
         for t in tasks:
-            if status_filter != "All" and t["status"].lower() != status_filter.lower():
+            is_item_dismissed = t.get("status") in ("cancelled", "dismissed")
+            if status_filter == "Active" and is_item_dismissed:
                 continue
-            if owner_filter != "All" and t.get("owner", "") != owner_filter:
+            if status_filter == "Dismissed" and not is_item_dismissed:
+                continue
+            if owner_filter != "All Assignees" and t.get("owner", "") != owner_filter:
                 continue
             if search_query.strip():
                 q = search_query.strip().lower()
@@ -757,17 +769,70 @@ with tab2:
                 start_dt, _, _ = parse_deadline_to_datetimes(dl, default_anchor=reference_date_val)
                 return start_dt
             filtered_tasks.sort(key=_deadline_sort_key)
-        elif sort_choice == "Date Added (Oldest)":
+        elif sort_choice == "Oldest First":
             filtered_tasks.sort(key=lambda item: item.get("created_at", ""))
         else:
             filtered_tasks.sort(key=lambda item: item.get("created_at", ""), reverse=True)
 
+        total_filtered = len(filtered_tasks)
+
+        # Selection state
+        if "selected_task_ids" not in st.session_state:
+            st.session_state["selected_task_ids"] = set()
+
+        curr_selected = set()
+        for t in filtered_tasks:
+            if st.session_state.get(f"sel_{t['task_id']}", False):
+                curr_selected.add(t["task_id"])
+        st.session_state["selected_task_ids"] = curr_selected
+        n_sel = len(curr_selected)
+
+        # High-density Batch Action Toolbar
+        if filtered_tasks:
+            all_sel = (n_sel == len(filtered_tasks) and len(filtered_tasks) > 0)
+            tb_col1, tb_col2, tb_col3, tb_col4 = st.columns([1.2, 1.4, 1.4, 1.4])
+            with tb_col1:
+                if st.button("Select All" if not all_sel else "Deselect All", key="btn_toggle_select_all", use_container_width=True):
+                    if not all_sel:
+                        for t in filtered_tasks:
+                            st.session_state[f"sel_{t['task_id']}"] = True
+                        st.session_state["selected_task_ids"] = set(t["task_id"] for t in filtered_tasks)
+                    else:
+                        for t in tasks:
+                            st.session_state[f"sel_{t['task_id']}"] = False
+                        st.session_state["selected_task_ids"].clear()
+                    st.rerun()
+
+            with tb_col2:
+                del_label = f"Delete Selected ({n_sel})" if n_sel > 0 else "Delete Selected"
+                if st.button(del_label, disabled=(n_sel == 0), key="btn_del_selected", type="primary" if n_sel > 0 else "secondary", use_container_width=True, help="Permanently delete selected tasks"):
+                    del_n = safe_delete_tasks(task_store, list(curr_selected))
+                    for tid in curr_selected:
+                        st.session_state.pop(f"sel_{tid}", None)
+                    st.session_state["selected_task_ids"].clear()
+                    st.success(f"Deleted {del_n} task(s).")
+                    st.rerun()
+
+            with tb_col3:
+                dismiss_label = f"Dismiss Selected ({n_sel})" if n_sel > 0 else "Dismiss Selected"
+                if st.button(dismiss_label, disabled=(n_sel == 0), key="btn_dismiss_selected", use_container_width=True, help="Dismiss selected tasks"):
+                    up_n = safe_batch_update_status(task_store, list(curr_selected), "dismissed")
+                    for tid in curr_selected:
+                        st.session_state.pop(f"sel_{tid}", None)
+                    st.session_state["selected_task_ids"].clear()
+                    st.info(f"Dismissed {up_n} task(s).")
+                    st.rerun()
+
+            with tb_col4:
+                st.markdown(f"<div style='text-align:right; padding-top:6px; font-size:12px; font-weight:600; color:#64748B;'>Showing {total_filtered} task(s)</div>", unsafe_allow_html=True)
+
         if not filtered_tasks:
             st.info("No tasks match the active filters.")
 
+        # Render Task Cards
         for t in filtered_tasks:
-            is_done = t["status"] == "completed"
-            is_cancel = t["status"] == "cancelled"
+            is_item_dismissed = t.get("status") in ("cancelled", "dismissed")
+            is_selected = (t["task_id"] in curr_selected)
 
             # Parse date chip
             m_txt, d_txt, w_txt = format_calendar_chip(t["deadline"])
@@ -779,17 +844,13 @@ with tab2:
 
             # Check Overdue Status
             is_overdue = False
-            if t["status"] == "pending" and t.get("deadline") and t["deadline"].lower() != "none specified":
+            if not is_item_dismissed and t.get("deadline") and t["deadline"].lower() != "none specified":
                 t_dt, _, _ = parse_deadline_to_datetimes(t["deadline"], default_anchor=reference_date_val)
                 if t_dt.date() < reference_date_val:
                     is_overdue = True
 
-            # Status pill styling
-            if is_done:
-                s_bg, s_fg, s_border = "#ECFDF5", "#065F46", "#A7F3D0"
-                card_border = "#059669"
-                status_display = "COMPLETED"
-            elif is_cancel:
+            # Status pill & card border styling
+            if is_item_dismissed:
                 s_bg, s_fg, s_border = "#F1F5F9", "#475569", "#CBD5E1"
                 card_border = "#94A3B8"
                 status_display = "DISMISSED"
@@ -798,126 +859,133 @@ with tab2:
                 card_border = "#EF4444"
                 status_display = "OVERDUE"
             else:
-                s_bg, s_fg, s_border = "#FEF3C7", "#92400E", "#FCD34D"
+                s_bg, s_fg, s_border = "#EEF2FF", "#4338CA", "#C7D2FE"
                 card_border = "#4F46E5"
-                status_display = "PENDING"
+                status_display = "ACTIVE"
 
-            title_style = "text-decoration: line-through; color: #94A3B8;" if is_done else "color: #1E293B;"
+            title_style = "color: #94A3B8; text-decoration: line-through;" if is_item_dismissed else "color: #0F172A;"
+            card_bg = "#F5F3FF" if is_selected else "#FFFFFF"
+            card_outline = f"border-left: 4px solid {card_border}; border-top: 1px solid #C7D2FE; border-right: 1px solid #C7D2FE; border-bottom: 1px solid #C7D2FE;" if is_selected else f"border-left: 4px solid {card_border}; border: 1px solid #E2E8F0;"
 
-            st.markdown(f"""
-            <div style="border-left: 5px solid {card_border}; background: #FFFFFF; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);">
-                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
-                    <div style="display: flex; align-items: flex-start; gap: 14px; flex-grow: 1;">
-                        <!-- Calendar Block -->
-                        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:4px 10px; text-align:center; min-width:56px; flex-shrink:0;">
-                            <div style="font-size:9px; font-weight:800; color:{card_border}; text-transform:uppercase;">{m_txt}</div>
-                            <div style="font-size:18px; font-weight:800; color:#0F172A; line-height:1.1;">{d_txt}</div>
-                            <div style="font-size:9px; font-weight:700; color:#64748B;">{w_txt}</div>
+            card_col_chk, card_col_body = st.columns([0.04, 0.96])
+            with card_col_chk:
+                st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
+                st.checkbox(
+                    "",
+                    value=is_selected,
+                    key=f"sel_{t['task_id']}",
+                    label_visibility="collapsed"
+                )
+
+            with card_col_body:
+                st.markdown(f"""
+                <div style="{card_outline} background: {card_bg}; border-radius: 8px; padding: 12px 14px; margin-bottom: 6px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);">
+                    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+                        <div style="display: flex; align-items: flex-start; gap: 12px; flex-grow: 1;">
+                            <!-- Calendar Block -->
+                            <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:6px; padding:3px 8px; text-align:center; min-width:52px; flex-shrink:0;">
+                                <div style="font-size:9px; font-weight:800; color:{card_border}; text-transform:uppercase;">{m_txt}</div>
+                                <div style="font-size:16px; font-weight:800; color:#0F172A; line-height:1.1;">{d_txt}</div>
+                                <div style="font-size:9px; font-weight:600; color:#64748B;">{w_txt}</div>
+                            </div>
+                            <!-- Details -->
+                            <div style="flex-grow:1;">
+                                <div style="font-size:14px; font-weight:700; {title_style}; margin-bottom:4px; line-height:1.3;">
+                                    {t['action_description']}
+                                </div>
+                                <!-- Metadata Row -->
+                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                    <span style="background:{a_bg}; color:{a_fg}; border:1px solid {a_border}; border-radius:12px; padding:1px 7px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+                                        <span style="background:{a_fg}; color:white; border-radius:50%; width:12px; height:12px; display:inline-flex; align-items:center; justify-content:center; font-size:8px; font-weight:800;">{initial}</span>
+                                        {owner_name}
+                                    </span>
+                                    <span style="font-size:11px; color:#475569;">Due: <strong>{t['deadline']}</strong></span>
+                                    <span style="background:#F1F5F9; color:#475569; border:1px solid #E2E8F0; border-radius:4px; padding:1px 6px; font-size:10px; font-weight:600;">
+                                        Origin: {thread_title}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                        <!-- Details -->
-                        <div style="flex-grow:1;">
-                            <div style="font-size:15px; font-weight:700; {title_style}; margin-bottom:4px;">
-                                {t['action_description']}
-                            </div>
-                            <!-- Assignee & Deadline -->
-                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
-                                <span style="background:{a_bg}; color:{a_fg}; border:1px solid {a_border}; border-radius:14px; padding:1px 8px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
-                                    <span style="background:{a_fg}; color:white; border-radius:50%; width:14px; height:14px; display:inline-flex; align-items:center; justify-content:center; font-size:9px; font-weight:800;">{initial}</span>
-                                    {owner_name}
-                                </span>
-                                <span style="font-size:11px; color:#64748B;">Due: <strong>{t['deadline']}</strong></span>
-                                <span style="font-size:11px; color:#94A3B8;">• Added {t['created_at'][:10]}</span>
-                            </div>
-                            <!-- Source Email Traceability Badge -->
-                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                                <span style="background:#F1F5F9; color:#334155; border:1px solid #CBD5E1; border-radius:4px; padding:1px 6px; font-size:11px; font-weight:700;">
-                                    ORIGIN: {thread_title}
-                                </span>
-                                <span style="font-size:11px; color:#64748B;">Sender: <strong>{sender_name}</strong></span>
-                            </div>
+                        <!-- Status Badge -->
+                        <div style="background:{s_bg}; color:{s_fg}; border:1px solid {s_border}; border-radius:12px; padding:2px 8px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; flex-shrink:0;">
+                            {status_display}
                         </div>
-                    </div>
-                    <!-- Status Badge -->
-                    <div style="background:{s_bg}; color:{s_fg}; border:1px solid {s_border}; border-radius:16px; padding:3px 10px; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; flex-shrink:0;">
-                        {status_display}
                     </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
 
-            # 3 Collapsible Action Sections: Evidence, History, and Edit
-            col_act1, col_act2, col_act3 = st.columns([1, 1, 1])
-            with col_act1:
-                with st.expander(f"Source Message & Evidence (ID: {t['task_id'][:12]})", expanded=False):
-                    src_full = t.get("source_text", "")
-                    ev = t.get("evidence_text", "")
-                    st.markdown(f"**Email Origin:** `{thread_title}` (Sender: **{sender_name}**)")
-                    st.markdown(f"**Target Slice:** *\"{ev}\"* `[{t.get('start_offset', 0)}:{t.get('end_offset', len(ev))}]`")
+                # Single Consolidated Drawer: Details & Edit
+                with st.expander("Details & Edit", expanded=False):
+                    history = task_store.get_history(t["task_id"])
+                    tab_ev, tab_hist, tab_edit = st.tabs(["Source Evidence", f"Audit Trail ({len(history)})", "Edit Task"])
 
-                    if ev and ev in src_full:
-                        parts = src_full.split(ev, 1)
-                        before_clean = html.escape(parts[0]).replace("\n", "<br>")
-                        after_clean = html.escape(parts[1]).replace("\n", "<br>")
-                        ev_clean = html.escape(ev)
-                        highlighted_html = f"{before_clean}<mark style='background:#FEF3C7; color:#92400E; padding:2px 6px; border-radius:4px; font-weight:700; border:1px solid #FCD34D;'>{ev_clean}</mark>{after_clean}"
+                    with tab_ev:
+                        src_full = t.get("source_text", "")
+                        ev = t.get("evidence_text", "")
+                        st.markdown(f"**Email Origin:** `{thread_title}` (Sender: **{sender_name}**)")
+                        st.markdown(f"**Target Slice:** *\"{ev}\"* `[{t.get('start_offset', 0)}:{t.get('end_offset', len(ev))}]`")
+
+                        if ev and ev in src_full:
+                            parts = src_full.split(ev, 1)
+                            before_clean = html.escape(parts[0]).replace("\n", "<br>")
+                            after_clean = html.escape(parts[1]).replace("\n", "<br>")
+                            ev_clean = html.escape(ev)
+                            highlighted_html = f"{before_clean}<mark style='background:#FEF3C7; color:#92400E; padding:2px 6px; border-radius:4px; font-weight:700; border:1px solid #FCD34D;'>{ev_clean}</mark>{after_clean}"
+                        else:
+                            highlighted_html = html.escape(src_full).replace("\n", "<br>")
+
+                        st.markdown(f"""
+                        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:6px; padding:8px 12px; font-size:12px; line-height:1.5; color:#334155; margin-top:4px;">
+                            <div style="font-size:10px; font-weight:700; color:#64748B; text-transform:uppercase; margin-bottom:4px;">Full Original Message:</div>
+                            {highlighted_html}
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                    with tab_hist:
+                        if not history:
+                            st.caption("No history events logged yet.")
+                        else:
+                            for h in history:
+                                st.markdown(f"- **{h['timestamp'][:16]}** | `{h['update_type']}` | `{h['old_value']}` -> `{h['new_value']}`")
+
+                    with tab_edit:
+                        edit_b_desc = st.text_input("Description", value=t["action_description"], key=f"e_desc_{t['task_id']}")
+                        e_c1, e_c2 = st.columns(2)
+                        with e_c1:
+                            edit_b_owner = st.text_input("Assignee", value=t["owner"], key=f"e_owner_{t['task_id']}")
+                        with e_c2:
+                            edit_b_dl = st.text_input("Due Date", value=t["deadline"], key=f"e_dl_{t['task_id']}")
+                        if st.button("Save Changes", key=f"btn_save_edit_{t['task_id']}", type="primary", use_container_width=True):
+                            task_store.update_task_details(t["task_id"], edit_b_desc, edit_b_owner, edit_b_dl)
+                            st.success("Task details saved.")
+                            st.rerun()
+
+                # Action Buttons Row: 3 text-only actions
+                btn_gcal_col, btn_dismiss_col, btn_del_col = st.columns([1.4, 1.2, 1.0])
+                with btn_gcal_col:
+                    gcal_url = generate_google_calendar_url(t)
+                    st.link_button("Add to Calendar", url=gcal_url, type="secondary", use_container_width=True)
+                with btn_dismiss_col:
+                    if not is_item_dismissed:
+                        if st.button("Dismiss", key=f"btn_canc_{t['task_id']}", type="secondary", use_container_width=True):
+                            task_store.apply_update(t["task_id"], "dismissed", "dismissed", "Dismissed by user", "User dismissed task")
+                            st.info("Task dismissed.")
+                            st.rerun()
                     else:
-                        highlighted_html = html.escape(src_full).replace("\n", "<br>")
-
-                    st.markdown(f"""
-                    <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:6px; padding:10px 12px; font-size:12px; line-height:1.6; color:#334155; margin-top:6px;">
-                        <div style="font-size:10px; font-weight:700; color:#64748B; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.5px;">Full Original Email Thread:</div>
-                        {highlighted_html}
-                    </div>
-                    """, unsafe_allow_html=True)
-
-            with col_act2:
-                history = task_store.get_history(t["task_id"])
-                with st.expander(f"Audit History ({len(history)})", expanded=False):
-                    for h in history:
-                        st.markdown(f"- **{h['timestamp'][:16]}** | `{h['update_type']}` | `{h['old_value']}` -> `{h['new_value']}`")
-
-            with col_act3:
-                with st.expander("Edit Task Details", expanded=False):
-                    edit_b_desc = st.text_input("Description", value=t["action_description"], key=f"e_desc_{t['task_id']}")
-                    edit_b_owner = st.text_input("Assignee", value=t["owner"], key=f"e_owner_{t['task_id']}")
-                    edit_b_dl = st.text_input("Due Date", value=t["deadline"], key=f"e_dl_{t['task_id']}")
-                    if st.button("Save Changes", key=f"btn_save_edit_{t['task_id']}", type="primary", use_container_width=True):
-                        task_store.update_task_details(t["task_id"], edit_b_desc, edit_b_owner, edit_b_dl)
-                        st.success("Task details updated in ledger.")
+                        if st.button("Restore", key=f"btn_rest_{t['task_id']}", type="secondary", use_container_width=True):
+                            task_store.apply_update(t["task_id"], "pending", "pending", "Restored", "User restored task")
+                            st.success("Task restored.")
+                            st.rerun()
+                with btn_del_col:
+                    if st.button("Delete", key=f"btn_quick_del_{t['task_id']}", type="secondary", use_container_width=True, help="Permanently delete this individual task"):
+                        task_store.delete_task(t["task_id"])
+                        st.session_state.pop(f"sel_{t['task_id']}", None)
+                        if t["task_id"] in st.session_state.get("selected_task_ids", set()):
+                            st.session_state["selected_task_ids"].discard(t["task_id"])
+                        st.success("Task deleted.")
                         st.rerun()
 
-            # Quick Status & Calendar Action Buttons
-            btn_done_col, btn_cancel_col, btn_gcal_col, btn_ics_col = st.columns([1, 1, 1.4, 1])
-            with btn_done_col:
-                if not is_done:
-                    if st.button("Mark Complete", key=f"btn_done_{t['task_id']}", type="secondary", use_container_width=True):
-                        task_store.apply_update(t["task_id"], "completed", "completed", "Marked complete", "User marked complete")
-                        st.success("Task marked complete.")
-                        st.rerun()
-                else:
-                    if st.button("Reopen Task", key=f"btn_reopen_{t['task_id']}", type="secondary", use_container_width=True):
-                        task_store.apply_update(t["task_id"], "pending", "pending", "Reopened", "User reopened task")
-                        st.success("Task reopened.")
-                        st.rerun()
-            with btn_cancel_col:
-                if not is_done:
-                    if st.button("Dismiss Task", key=f"btn_canc_{t['task_id']}", type="secondary", use_container_width=True):
-                        task_store.apply_update(t["task_id"], "cancelled", "cancelled", "Dismissed by user", "User dismissed task")
-                        st.info("Task dismissed.")
-                        st.rerun()
-            with btn_gcal_col:
-                gcal_url = generate_google_calendar_url(t)
-                st.link_button("Add to Google Calendar", url=gcal_url, type="secondary", use_container_width=True)
-            with btn_ics_col:
-                ics_data = generate_ics_content(t)
-                st.download_button(
-                    label="Download .ics",
-                    data=ics_data,
-                    file_name=f"{t['task_id']}.ics",
-                    mime="text/calendar",
-                    key=f"ics_{t['task_id']}",
-                    use_container_width=True,
-                )
+                st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
 
 # -------------------------------------------------------------
@@ -932,10 +1000,12 @@ with tab3:
         st.warning("No tasks saved yet. Save a task in Tab 1 before tracking follow-ups.")
     else:
         followup_presets = {
-            "Follow-up 1 (DevOps Incident): Elena Completed Redis Saturation Investigation": "Elena has finished investigating the Redis connection pool saturation; connection limits have been stabilized.",
-            "Follow-up 2 (Sprint Update): David Requesting Deadline Postponement": "We have postponed the security architecture diagram to next Monday. David will coordinate with compliance.",
-            "Follow-up 3 (Task Completion): Quarterly Budget Submitted": "I have finished preparing the finalized quarterly report and submitted it to the team.",
-            "Follow-up 4 (Reassignment): Task Delegated to Alternate Owner": "Sarah is out of the office, so Alex will run the load testing benchmark instead.",
+            "Chat Reply (Slack/Teams): PR #402 Reviewed & Merged": "@alex I have reviewed PR #402 and merged it to main branch; all checks green.",
+            "Chat Status: Elena Completed Redis Saturation Investigation": "Elena has finished investigating the Redis connection pool saturation; connection limits have been stabilized.",
+            "Sprint Update: David Postponed Security Architecture to Next Monday": "We have postponed the security architecture diagram to next Monday. David will coordinate with compliance.",
+            "Mobile SMS Ping: Client Postponed Call to Friday": "Hey team, client postponed the review call to Friday afternoon.",
+            "Task Completion: Quarterly Budget Submitted": "I have finished preparing the finalized quarterly report and submitted it to the team.",
+            "Reassignment: Task Delegated to Alternate Owner": "Sarah is out of the office, so Alex will run the load testing benchmark instead.",
             "Custom Follow-up (Type / Paste Your Own)": "",
         }
 

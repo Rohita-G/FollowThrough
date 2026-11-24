@@ -5,6 +5,7 @@ __pycache__/
 .pytest_cache/
 
 # Environments
+.venv
 .venv/
 venv/
 ENV/
@@ -25,6 +26,7 @@ models/*.bin
 models/*.safetensors
 models/*.joblib
 models/distilbert_fine_tuned/
+models/distilbert_weighted/
 models/distilbert_checkpoints/
 *.pt
 

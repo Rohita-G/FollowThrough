@@ -1,5 +1,6 @@
 """Synthetic tests for task extraction, SQLite persistence, semantic ranking, and update history."""
 
+import datetime
 from pathlib import Path
 import tempfile
 
@@ -184,6 +185,91 @@ def test_disclaimer_stripping_and_header_date():
     assert c["owner"].lower() == "bob"
 
 
+def test_chat_and_instant_message_extraction():
+    # Chat message with @mentions, shorthand leads (can u, plz), and colon speaker prefixes
+    chat_log = (
+        "@kevin: can you review the pull request #402 before 3 PM today?\n"
+        "alex: I will deploy the hotfix patch to staging by tonight.\n"
+        "@sarah please verify the staging endpoints by EOD.\n"
+        "dan: let's jump on a sync tomorrow at 11am\n"
+        "Hey Alex, plz send over the pitch deck by tomorrow afternoon."
+    )
+    candidates = extract_candidate_tasks(chat_log, reference_date=datetime.date(2026, 10, 17))
+    assert len(candidates) == 5
+
+    # Check Kevin's request
+    c0 = candidates[0]
+    assert c0["owner"].lower() == "kevin"
+    assert "pull request" in c0["action_description"].lower()
+    assert "15:00" in c0["deadline_normalized"]
+
+    # Check Alex's commitment
+    c1 = candidates[1]
+    assert c1["owner"].lower() == "alex"
+    assert c1["task_type"] == "Commitment"
+    assert "staging" in c1["action_description"].lower()
+
+    # Check Sarah's request
+    c2 = candidates[2]
+    assert c2["owner"].lower() == "sarah"
+    assert "staging endpoints" in c2["action_description"].lower()
+
+    # Check Dan's sync request
+    c3 = candidates[3]
+    assert c3["owner"].lower() == "dan"
+    assert "sync" in c3["action_description"].lower()
+
+    # Check Alex's mobile text
+    c4 = candidates[4]
+    assert c4["owner"].lower() == "alex"
+    assert "pitch deck" in c4["action_description"].lower()
+
+
+def test_task_deletion_and_ledger_purge():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "test_tasks.db"
+        store = TaskStore(db_path)
+
+        # Create 3 tasks
+        store.save_task({
+            "source_text": "Task 1",
+            "action_description": "Task 1 action",
+            "owner": "Alice",
+            "deadline": "tomorrow",
+        })
+        _, tid2 = store.save_task({
+            "source_text": "Task 2",
+            "action_description": "Task 2 action",
+            "owner": "Bob",
+            "deadline": "tomorrow",
+        })
+        _, tid3 = store.save_task({
+            "source_text": "Task 3",
+            "action_description": "Task 3 action",
+            "owner": "Charlie",
+            "deadline": "tomorrow",
+        })
+
+        assert len(store.list_tasks()) == 3
+
+        # Mark task 2 completed and task 3 cancelled
+        store.apply_update(tid2, "completed", "completed", "done", "finished")
+        store.apply_update(tid3, "cancelled", "cancelled", "dropped", "not needed")
+
+        # Purge completed and cancelled tasks
+        purged = store.clear_completed_and_cancelled()
+        assert purged == 2
+
+        remaining = store.list_tasks()
+        assert len(remaining) == 1
+        assert remaining[0]["owner"] == "Alice"
+
+        # Delete single task
+        del_ok = store.delete_task(remaining[0]["task_id"])
+        assert del_ok is True
+        assert len(store.list_tasks()) == 0
+
+
 if __name__ == "__main__":
     test_evidence_offsets_exact_match()
     test_persistence_and_deduplication()
@@ -191,5 +277,8 @@ if __name__ == "__main__":
     test_semantic_ranking_behavior()
     test_update_task_details_audit_log()
     test_disclaimer_stripping_and_header_date()
+    test_chat_and_instant_message_extraction()
+    test_task_deletion_and_ledger_purge()
     print("All synthetic task workflow tests passed successfully!")
+
 

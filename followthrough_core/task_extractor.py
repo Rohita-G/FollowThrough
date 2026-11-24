@@ -32,18 +32,19 @@ ACTION_LEAD_PATTERNS = [
 ]
 
 # Common workplace action verbs
+# Common workplace action verbs including dev, ops, and chat terminology
 ACTION_VERBS = (
     r"(?:update|review|prepare|schedule|submit|coordinate|investigate|verify|"
     r"check|fix|resolve|send|email|share|provide|deploy|test|audit|monitor|"
     r"draft|compile|implement|deliver|follow\s+up|reach\s+out|organize|call|"
-    r"arrange|finalize|confirm|sign|approve|analyze|reconcile|benchmark|merge|push|file)"
+    r"arrange|finalize|confirm|sign|approve|analyze|reconcile|benchmark|merge|push|file|jump|hop|sync|ping|run)"
 )
 
 # Patterns detecting explicit personal names assigned to actions
 NAME_TARGET_PATTERNS = [
-    re.compile(r"^@?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*[,:\-]\s*(?:please|could you|can you|let's|kindly|make sure|be sure|you should)", re.I),
-    re.compile(r"^@?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*[,:\-]\s*", re.I),
-    re.compile(r"\b(?:assigned\s+to|ask)\s+([A-Z][a-z]+)\b", re.I),
+    re.compile(r"^@([A-Za-z0-9_.-]+)\b\s*[,:\-]?\s*", re.I),
+    re.compile(r"^([A-Za-z0-9_.-]+)\s*[,:\-]\s*", re.I),
+    re.compile(r"\b(?:assigned\s+to|ask)\s+@?([A-Za-z0-9_.-]+)\b", re.I),
 ]
 
 
@@ -71,20 +72,23 @@ def clean_action_title(sentence: str) -> str:
     Strips discourse connectives, greeting names, and conversational preambles.
     """
     text = sentence.strip().rstrip(".!?")
-    # Strip conversational discourse connectives
+    # Strip conversational discourse connectives and informal chat openers
     text = re.sub(
-        r"^(?:also|additionally|furthermore|meanwhile|in the meantime|next|first|finally|then),?\s*",
+        r"^(?:also|additionally|furthermore|meanwhile|in the meantime|next|first|finally|then|hey\s*,?\s*|hi\s*,?\s*|quick reminder\s*(?:to\s*)?),?\s*",
         "",
         text,
         flags=re.I,
     ).strip()
-    # Strip leading addressed name callout: e.g., 'David, ' or 'Elena: '
-    text = re.sub(r"^@?[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\s*[,:\-]\s*", "", text).strip()
+    # Strip leading addressed name callout: e.g., 'David, ' or 'Elena: ' or '@kevin: '
+    text = re.sub(r"^@?[A-Za-z0-9_.-]+(?:\s+[A-Za-z0-9_.-]+)?\s*[,:\-]?\s*", "", text, flags=re.I).strip()
     prefixes = [
         r"^(?:please\s*,?\s*)",
-        r"^(?:kindly\s*,?\s*)",
+        r"^(?:plz\s*,?\s*)",
+        r"^(?:pls\s*,?\s*)",
         r"^(?:could\s+you\s+(?:please\s*)?)",
+        r"^(?:could\s+u\s+(?:please\s*)?)",
         r"^(?:can\s+you\s+(?:please\s*)?)",
+        r"^(?:can\s+u\s+(?:please\s*)?)",
         r"^(?:would\s+you\s+mind\s+)",
         r"^(?:let\'s\s+)",
         r"^(?:i\s+will\s+)",
@@ -179,20 +183,30 @@ def extract_candidate_tasks(
             flags=re.I,
         ).strip()
 
-        # Check for explicit addressed name at start: e.g. "David, please..." or "Elena: please..."
+        # Check for explicit addressed name at start: e.g. "David, please..." or "@kevin: can you..." or "alex: I will..." or "Hey Alex, plz..."
         addressed_name: Optional[str] = None
-        for np in NAME_TARGET_PATTERNS:
-            m_np = np.search(norm_sentence)
-            if m_np:
-                addressed_name = m_np.group(1)
-                break
+        m_greet_inline = re.match(r"^(?:hi|hello|dear|hey)\s+@?([A-Za-z0-9_.-]+)\s*[,:]\s*", norm_sentence, re.I)
+        if m_greet_inline:
+            addressed_name = m_greet_inline.group(1)
+        else:
+            for np in NAME_TARGET_PATTERNS:
+                m_np = np.search(norm_sentence)
+                if m_np:
+                    addressed_name = m_np.group(1)
+                    break
 
-        # Strip addressed name for action verb checks
-        after_name_sentence = re.sub(r"^@?[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\s*[,:\-]\s*", "", norm_sentence).strip()
+        # Strip addressed name or author callout: e.g. "David, please...", "@kevin: can you...", "alex: I will...", "Hey Alex, ..."
+        if addressed_name:
+            after_name_sentence = re.sub(rf"^(?:(?:hi|hello|dear|hey)\s+)?@?{re.escape(addressed_name)}\s*[,:\-]?\s*", "", norm_sentence, flags=re.I).strip()
+        else:
+            after_name_sentence = re.sub(r"^@?[A-Za-z0-9_.-]+(?:\s+[A-Za-z0-9_.-]+)?\s*[,:\-]\s*", "", norm_sentence, flags=re.I).strip()
+
+        # Strip informal conversational chatter leads: e.g. "hey quick reminder", "quick reminder to", "hey team,"
+        after_name_sentence = re.sub(r"^(?:(?:hey|hi|hello|quick reminder|reminder|fyi)\b\s*[,:\-]?\s*)+", "", after_name_sentence, flags=re.I).strip()
 
         # 1. Action Directive / Commitment Check
-        is_commitment_lead = bool(re.search(r"^(?:i|we)\s+(?:will|shall|can|promise|plan to|’ll|'ll|need to|must|should)\b", after_name_sentence, re.I))
-        is_request_lead = bool(re.search(r"^(?:please|kindly|could you|can you|would you mind|let\'s|you should|make sure to|be sure to)\b", after_name_sentence, re.I))
+        is_commitment_lead = bool(re.search(r"^(?:i|we)\s+(?:will|shall|can|promise|plan to|’ll|'ll|need to|must|should|am going to|’m going to|'m going to)\b", after_name_sentence, re.I))
+        is_request_lead = bool(re.search(r"^(?:please|plz|pls|could you|could u|can you|can u|would you mind|let\'s|you should|make sure to|be sure to)\b", after_name_sentence, re.I))
         has_action_verb = bool(re.search(r"\b" + ACTION_VERBS + r"\b", after_name_sentence, re.I))
         starts_with_action_verb = bool(re.search(r"^(?:" + ACTION_VERBS + r")\b", after_name_sentence, re.I))
 
@@ -205,7 +219,7 @@ def extract_candidate_tasks(
         elif (is_request_lead or starts_with_action_verb) and (has_action_verb or len(after_name_sentence.split()) >= 4):
             is_action = True
             task_type = "Request"
-        elif addressed_name and (is_request_lead or bool(re.search(r"^(?:can|could|please|update|review|prepare|schedule|submit|coordinate|check|fix|deploy|test|investigate)\b", after_name_sentence, re.I))):
+        elif addressed_name and (is_request_lead or bool(re.search(r"^(?:can|could|please|plz|pls|update|review|prepare|schedule|submit|coordinate|check|fix|deploy|test|investigate|jump|hop|sync|ping)\b", after_name_sentence, re.I))):
             is_action = True
             task_type = "Request"
         else:
@@ -231,6 +245,10 @@ def extract_candidate_tasks(
                     owner = greeting_recipient
                 elif greeting_recipient:
                     owner = greeting_recipient
+        else:
+            # If author prefix like "alex: I will..." -> author is the speaker committing
+            if task_type == "Commitment" and re.search(r"^(?:i\s+|i'll|i’ll|i\s+will|we\s+|we'll)", after_name_sentence, re.I):
+                owner = addressed_name
 
         # 3. Literal Deadline Extraction & Temporal Grounding
         deadline: Optional[str] = None
